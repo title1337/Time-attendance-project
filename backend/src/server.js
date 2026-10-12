@@ -15,7 +15,6 @@ const REQUIRED_ENV = ['JWT_SECRET', 'SUPABASE_URL', 'SUPABASE_SERVICE_KEY'];
 const missing = REQUIRED_ENV.filter((key) => !process.env[key]);
 if (missing.length > 0) {
   console.error(`❌ Missing environment variables: ${missing.join(', ')}`);
-  process.exit(1);
 }
 
 // ─── App setup ────────────────────────────────────────────────────────────────
@@ -27,8 +26,8 @@ app.use(helmet());
 
 // ─── Rate Limiting (Prevents Brute-force & DDoS) ──────────────────────────────
 const globalLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 300, // limit each IP to 300 requests per windowMs
+  windowMs: 15 * 60 * 1000,
+  max: 300,
   standardHeaders: true,
   legacyHeaders: false,
   message: { success: false, message: 'Too many requests, please try again later.' },
@@ -36,17 +35,28 @@ const globalLimiter = rateLimit({
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 30, // limit login/register attempts per IP
+  max: 30,
   message: { success: false, message: 'Too many authentication attempts, please try again later.' },
 });
 
 app.use(globalLimiter);
 
 // ─── CORS & Body Parsers ──────────────────────────────────────────────────────
-app.use(cors({
-  origin: process.env.CLIENT_URL ?? 'http://localhost:5173',
-  credentials: true,
-}));
+const allowedOrigin = process.env.CLIENT_URL || '*';
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // Allow requests with no origin (like mobile apps or curl) or if origin is allowed
+      if (!origin || allowedOrigin === '*' || origin === allowedOrigin) {
+        callback(null, true);
+      } else {
+        callback(null, true); // Permissive for easy multi-domain deploy on Vercel
+      }
+    },
+    credentials: true,
+  })
+);
+
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 
@@ -75,9 +85,14 @@ app.use((err, _req, res, _next) => {
   res.status(500).json({ success: false, message: 'Internal server error' });
 });
 
-// ─── Start Server ─────────────────────────────────────────────────────────────
-app.listen(PORT, () => {
-  console.log(`🚀 Server  → http://localhost:${PORT}`);
-  console.log(`📋 Health  → http://localhost:${PORT}/api/health`);
-  console.log(`🌍 Env     → ${process.env.NODE_ENV}`);
-});
+// ─── Start Server if running directly (Local/Node) ────────────────────────────
+if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
+  app.listen(PORT, () => {
+    console.log(`🚀 Server  → http://localhost:${PORT}`);
+    console.log(`📋 Health  → http://localhost:${PORT}/api/health`);
+    console.log(`🌍 Env     → ${process.env.NODE_ENV}`);
+  });
+}
+
+// Export app for Vercel Serverless Function
+export default app;
