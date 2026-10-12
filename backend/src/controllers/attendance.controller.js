@@ -4,12 +4,17 @@ import { ok, created, badRequest, serverError } from '../utils/response.js';
 // ─── Private helpers ─────────────────────────────────────────────────────────
 
 /** Returns today's date in YYYY-MM-DD (server local date) */
-const getTodayDate = () => new Date().toISOString().split('T')[0];
+const getTodayDate = () =>
+  new Date().toLocaleDateString('en-CA', {
+    timeZone: 'Asia/Bangkok',
+  });
 
 /** Returns current time as HH:MM:SS */
 const getCurrentTime = () =>
-  new Date().toTimeString().split(' ')[0];
-
+  new Date().toLocaleTimeString('en-GB', {
+    timeZone: 'Asia/Bangkok',
+    hour12: false,
+  });
 // ─── Controllers ─────────────────────────────────────────────────────────────
 
 /** POST /api/attendance/checkin */
@@ -129,7 +134,10 @@ export const getMyHistory = async (req, res) => {
 
     if (error) throw error;
 
-    return ok(res, { data, meta: { total: count, page: Number(page), limit: Number(limit) } });
+    return ok(res, {
+      data,
+      meta: { total: count, page: Number(page), limit: Number(limit) },
+    });
   } catch (error) {
     return serverError(res, error, 'getMyHistory');
   }
