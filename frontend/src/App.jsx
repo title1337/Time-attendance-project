@@ -9,7 +9,9 @@ import {
 import LoginPage from './pages/auth/LoginPage';
 import RegisterPage from './pages/auth/RegisterPage';
 import DashboardPage from './pages/DashboardPage';
+import AttendancePage from './pages/AttendancePage';
 import LeavePage from './pages/LeavePage';
+import OvertimePage from './pages/OvertimePage';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -34,24 +36,17 @@ function App() {
             <Route path="/register" element={<RegisterPage />} />
           </Route>
 
-          <Route element={<PrivateRoute />}>
-            <Route path="/dashboard" element={<DashboardPage />} />
-            <Route path="/leave" element={<LeavePage />} />
-          </Route>
-
           {/* Private routes - require authentication */}
           <Route element={<PrivateRoute />}>
             <Route path="/dashboard" element={<DashboardPage />} />
-            {/* TODO: Add more pages */}
-            {/* <Route path="/attendance" element={<AttendancePage />} /> */}
-            {/* <Route path="/leave" element={<LeavePage />} /> */}
-            {/* <Route path="/overtime" element={<OvertimePage />} /> */}
+            <Route path="/attendance" element={<AttendancePage />} />
+            <Route path="/leave" element={<LeavePage />} />
+            <Route path="/overtime" element={<OvertimePage />} />
           </Route>
 
           {/* Admin routes */}
           <Route element={<AdminRoute />}>
-            {/* <Route path="/admin/users" element={<UsersPage />} /> */}
-            {/* <Route path="/admin/reports" element={<ReportsPage />} /> */}
+            {/* Future extension */}
           </Route>
 
           {/* Catch all */}

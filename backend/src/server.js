@@ -1,8 +1,13 @@
-import 'dotenv/config'; // ES6 — replaces dotenv.config()
+import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
+
 import authRoutes from './routes/auth.routes.js';
 import attendanceRoutes from './routes/attendance.routes.js';
+import leaveRoutes from './routes/leave.routes.js';
+import overtimeRoutes from './routes/overtime.routes.js';
 
 // ─── Validate required env vars at startup ────────────────────────────────────
 const REQUIRED_ENV = ['JWT_SECRET', 'SUPABASE_URL', 'SUPABASE_SERVICE_KEY'];
@@ -17,33 +22,60 @@ if (missing.length > 0) {
 const app = express();
 const PORT = process.env.PORT ?? 5000;
 
-// ─── Middleware ───────────────────────────────────────────────────────────────
+// ─── Security Headers (Helmet) ────────────────────────────────────────────────
+app.use(helmet());
+
+// ─── Rate Limiting (Prevents Brute-force & DDoS) ──────────────────────────────
+const globalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 300, // limit each IP to 300 requests per windowMs
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: 'Too many requests, please try again later.' },
+});
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 30, // limit login/register attempts per IP
+  message: { success: false, message: 'Too many authentication attempts, please try again later.' },
+});
+
+app.use(globalLimiter);
+
+// ─── CORS & Body Parsers ──────────────────────────────────────────────────────
 app.use(cors({
   origin: process.env.CLIENT_URL ?? 'http://localhost:5173',
   credentials: true,
 }));
-app.use(express.json());
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 
 // ─── Routes ───────────────────────────────────────────────────────────────────
 app.get('/api/health', (_req, res) =>
-  res.json({ status: 'OK', service: 'Time Attendance API', timestamp: new Date().toISOString() })
+  res.json({
+    status: 'OK',
+    service: 'Time Attendance API',
+    timestamp: new Date().toISOString(),
+  })
 );
 
-app.use('/api/auth', authRoutes);
+app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/attendance', attendanceRoutes);
+app.use('/api/leave', leaveRoutes);
+app.use('/api/overtime', overtimeRoutes);
 
-// ─── Error handlers ───────────────────────────────────────────────────────────
+// ─── 404 & Error handlers ─────────────────────────────────────────────────────
 app.use((req, res) =>
   res.status(404).json({ success: false, message: `Route ${req.method} ${req.originalUrl} not found` })
 );
 
 // eslint-disable-next-line no-unused-vars
 app.use((err, _req, res, _next) => {
-  console.error('[Unhandled]', err);
+  console.error('[Unhandled Server Error]', err);
   res.status(500).json({ success: false, message: 'Internal server error' });
 });
 
-// ─── Start ────────────────────────────────────────────────────────────────────
+// ─── Start Server ─────────────────────────────────────────────────────────────
 app.listen(PORT, () => {
   console.log(`🚀 Server  → http://localhost:${PORT}`);
   console.log(`📋 Health  → http://localhost:${PORT}/api/health`);
