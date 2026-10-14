@@ -31,7 +31,9 @@ export default function AttendancePage() {
   const { user } = useAuthStore();
   const today = new Date();
 
-  const [selectedMonth, setSelectedMonth] = useState(String(today.getMonth() + 1));
+  const [selectedMonth, setSelectedMonth] = useState(
+    String(today.getMonth() + 1),
+  );
   const [selectedYear, setSelectedYear] = useState(String(today.getFullYear()));
   const [searchTerm, setSearchTerm] = useState('');
   const debouncedSearch = useDebounce(searchTerm, 350);
@@ -75,7 +77,7 @@ export default function AttendancePage() {
         if (rec.check_in_time && rec.check_out_time) {
           const [inH, inM] = rec.check_in_time.split(':').map(Number);
           const [outH, outM] = rec.check_out_time.split(':').map(Number);
-          const totalMinutes = (outH * 60 + outM) - (inH * 60 + inM);
+          const totalMinutes = outH * 60 + outM - (inH * 60 + inM);
           if (totalMinutes > 0) {
             const h = Math.floor(totalMinutes / 60);
             const m = totalMinutes % 60;
@@ -84,16 +86,17 @@ export default function AttendancePage() {
         }
 
         return {
-          'ลำดับ': index + 1,
-          'รหัสพนักงาน': user?.employee_code || '-',
-          'ชื่อ-นามสกุล': `${user?.first_name || ''} ${user?.last_name || ''}`.trim(),
-          'แผนก': user?.department || '-',
-          'วันที่ปฏิบัติงาน': rec.work_date,
-          'เวลาเข้างาน': rec.check_in_time ? rec.check_in_time.slice(0, 5) : '-',
-          'เวลาออกงาน': rec.check_out_time ? rec.check_out_time.slice(0, 5) : '-',
-          'ระยะเวลาทำงาน': durationText,
-          'สถานะ': STATUS_LABELS[rec.status] || rec.status || '-',
-          'หมายเหตุ': rec.note || '-',
+          ลำดับ: index + 1,
+          รหัสพนักงาน: user?.employee_code || '-',
+          'ชื่อ-นามสกุล':
+            `${user?.first_name || ''} ${user?.last_name || ''}`.trim(),
+          แผนก: user?.department || '-',
+          วันที่ปฏิบัติงาน: rec.work_date,
+          เวลาเข้างาน: rec.check_in_time ? rec.check_in_time.slice(0, 5) : '-',
+          เวลาออกงาน: rec.check_out_time ? rec.check_out_time.slice(0, 5) : '-',
+          ระยะเวลาทำงาน: durationText,
+          สถานะ: STATUS_LABELS[rec.status] || rec.status || '-',
+          หมายเหตุ: rec.note || '-',
         };
       });
 
@@ -103,7 +106,7 @@ export default function AttendancePage() {
 
       // Auto column widths
       const colWidths = [
-        { wch: 8 },  // ลำดับ
+        { wch: 8 }, // ลำดับ
         { wch: 14 }, // รหัสพนักงาน
         { wch: 22 }, // ชื่อ-นามสกุล
         { wch: 16 }, // แผนก
@@ -159,7 +162,9 @@ export default function AttendancePage() {
       <div className="max-w-5xl mx-auto space-y-6">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">บันทึกการลงเวลาเข้า-ออกงาน</h1>
+            <h1 className="text-2xl font-bold text-gray-900">
+              บันทึกการลงเวลาเข้า-ออกงาน
+            </h1>
             <p className="text-gray-500 text-sm mt-1">
               ตรวจสอบประวัติการลงเวลาและสถานะการทำงานรายเดือน
             </p>
@@ -181,7 +186,7 @@ export default function AttendancePage() {
             <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-3" />
             <input
               type="text"
-              placeholder="ค้นหาวันที่ หรือ สถานะ (Debounce Search)..."
+              placeholder="ค้นหาวันที่ หรือ สถานะ (Search)..."
               className="w-full border border-gray-300 rounded-xl pl-10 pr-4 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -226,9 +231,13 @@ export default function AttendancePage() {
           </div>
 
           {isLoading ? (
-            <div className="py-12 text-center text-gray-400">กำลังโหลดข้อมูลประวัติการลงเวลา...</div>
+            <div className="py-12 text-center text-gray-400">
+              กำลังโหลดข้อมูลประวัติการลงเวลา...
+            </div>
           ) : filteredRecords.length === 0 ? (
-            <div className="py-12 text-center text-gray-400">ไม่พบประวัติการลงเวลาในช่วงนี้</div>
+            <div className="py-12 text-center text-gray-400">
+              ไม่พบประวัติการลงเวลาในช่วงนี้
+            </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm">
@@ -246,9 +255,13 @@ export default function AttendancePage() {
                   {filteredRecords.map((rec) => {
                     let durationText = '-';
                     if (rec.check_in_time && rec.check_out_time) {
-                      const [inH, inM] = rec.check_in_time.split(':').map(Number);
-                      const [outH, outM] = rec.check_out_time.split(':').map(Number);
-                      const totalMinutes = (outH * 60 + outM) - (inH * 60 + inM);
+                      const [inH, inM] = rec.check_in_time
+                        .split(':')
+                        .map(Number);
+                      const [outH, outM] = rec.check_out_time
+                        .split(':')
+                        .map(Number);
+                      const totalMinutes = outH * 60 + outM - (inH * 60 + inM);
                       if (totalMinutes > 0) {
                         const h = Math.floor(totalMinutes / 60);
                         const m = totalMinutes % 60;
@@ -262,13 +275,21 @@ export default function AttendancePage() {
                           {rec.work_date}
                         </td>
                         <td className="py-3.5 px-4 text-emerald-600 font-semibold">
-                          {rec.check_in_time ? rec.check_in_time.slice(0, 5) : '--:--'}
+                          {rec.check_in_time
+                            ? rec.check_in_time.slice(0, 5)
+                            : '--:--'}
                         </td>
                         <td className="py-3.5 px-4 text-rose-600 font-semibold">
-                          {rec.check_out_time ? rec.check_out_time.slice(0, 5) : '--:--'}
+                          {rec.check_out_time
+                            ? rec.check_out_time.slice(0, 5)
+                            : '--:--'}
                         </td>
-                        <td className="py-3.5 px-4 text-gray-600">{durationText}</td>
-                        <td className="py-3.5 px-4">{renderStatus(rec.status)}</td>
+                        <td className="py-3.5 px-4 text-gray-600">
+                          {durationText}
+                        </td>
+                        <td className="py-3.5 px-4">
+                          {renderStatus(rec.status)}
+                        </td>
                         <td className="py-3.5 px-4 text-gray-400 text-xs truncate max-w-xs">
                           {rec.note || '-'}
                         </td>
