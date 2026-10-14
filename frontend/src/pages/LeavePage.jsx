@@ -24,7 +24,7 @@ import { useDebounce } from '../hooks/useDebounce';
 
 const LEAVE_TYPES = [
   {
-    value: 'annual',
+    value: 'vacation',
     label: 'ลาพักร้อน',
     color: 'text-indigo-600 bg-indigo-50 border-indigo-200',
   },
@@ -49,7 +49,7 @@ export default function LeavePage() {
 
   // Form State
   const [form, setForm] = useState({
-    leaveType: 'annual',
+    leaveType: 'vacation',
     startDate: '',
     endDate: '',
     reason: '',
@@ -85,7 +85,12 @@ export default function LeavePage() {
     mutationFn: leaveApi.createRequest,
     onSuccess: () => {
       toast.success('ส่งคำขอลางานเรียบร้อยแล้ว');
-      setForm({ leaveType: 'annual', startDate: '', endDate: '', reason: '' });
+      setForm({
+        leaveType: 'vacation',
+        startDate: '',
+        endDate: '',
+        reason: '',
+      });
       queryClient.invalidateQueries({ queryKey: ['leave', 'my-history'] });
     },
     onError: (error) => {
@@ -135,7 +140,7 @@ export default function LeavePage() {
 
   function resetForm() {
     setEditingId(null);
-    setForm({ leaveType: 'annual', startDate: '', endDate: '', reason: '' });
+    setForm({ leaveType: 'vacation', startDate: '', endDate: '', reason: '' });
   }
 
   const handleSubmit = (e) => {
@@ -197,7 +202,7 @@ export default function LeavePage() {
 
   // Count Leave Statistics
   const annualCount = myLeaves.filter(
-    (l) => l.leave_type === 'annual' && l.status === 'approved',
+    (l) => l.leave_type === 'vacation' && l.status === 'approved',
   ).length;
   const sickCount = myLeaves.filter(
     (l) => l.leave_type === 'sick' && l.status === 'approved',
