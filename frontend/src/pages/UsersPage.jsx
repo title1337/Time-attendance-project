@@ -1,12 +1,12 @@
 ﻿import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Search, Users, UserRound, ShieldCheck, Shield, UserCheck, UserX } from 'lucide-react';
+import { Search, Users, UserRound, ShieldCheck, UserCheck, UserX } from 'lucide-react';
 import toast from 'react-hot-toast';
 import MainLayout from '../components/layout/MainLayout';
 import useAuthStore from '../store/authStore';
 import { usersApi } from '../api/users.api';
 
-const roleNames = { employee: 'พนักงาน', manager: 'ผู้จัดการ', admin: 'ผู้ดูแลระบบ' };
+const roleNames = { employee: 'พนักงาน', admin: 'ผู้ดูแลระบบ' };
 
 function UsersPage() {
   const [search, setSearch] = useState('');
@@ -61,7 +61,7 @@ function UsersPage() {
               <thead className="bg-gray-50 text-xs font-semibold text-gray-500"><tr><th className="px-5 py-3">ผู้ใช้</th><th className="px-4 py-3">แผนก</th><th className="px-4 py-3">สิทธิ์</th><th className="px-4 py-3">สถานะ</th><th className="px-5 py-3 text-right">บัญชี</th></tr></thead>
               <tbody className="divide-y divide-gray-100">{filteredUsers.map((item) => {
                 const isSelf = item.id === user?.id;
-                const RoleIcon = item.role === 'admin' ? ShieldCheck : item.role === 'manager' ? Shield : UserRound;
+                const RoleIcon = item.role === 'admin' ? ShieldCheck : UserRound;
                 return <tr key={item.id} className="hover:bg-gray-50/70">
                   <td className="px-5 py-4"><div className="font-semibold text-gray-900">{item.first_name} {item.last_name}{isSelf && <span className="ml-2 text-xs font-normal text-indigo-600">คุณ</span>}</div><div className="mt-0.5 text-xs text-gray-500">{item.employee_code} · {item.email}</div></td>
                   <td className="px-4 py-4 text-gray-600">{item.department || '—'}</td>

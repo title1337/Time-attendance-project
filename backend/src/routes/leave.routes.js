@@ -9,7 +9,7 @@ import {
 } from '../controllers/leave.controller.js';
 import {
   authMiddleware,
-  requireManager,
+  requireAdminAccess,
 } from '../middleware/auth.middleware.js';
 
 const router = Router();
@@ -24,7 +24,7 @@ router.put('/:id', updateMyLeaveRequest);
 router.delete('/:id', deleteMyLeaveRequest);
 
 // Manager / Admin approval endpoints
-router.get('/all', requireManager, getAllLeaveRequests);
-router.patch('/:id/status', requireManager, updateLeaveStatus);
+router.get('/all', requireAdminAccess, getAllLeaveRequests);
+router.patch('/:id/status', requireAdminAccess, updateLeaveStatus);
 
 export default router;

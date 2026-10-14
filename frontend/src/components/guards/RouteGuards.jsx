@@ -18,9 +18,3 @@ export function AdminRoute() {
   return <Outlet />;
 }
 
-export function ManagerRoute() {
-  const { isAuthenticated, isManager } = useAuthStore();
-  if (!isAuthenticated) return <Navigate to="/login" replace />;
-  if (!isManager()) return <Navigate to="/dashboard" replace />;
-  return <Outlet />;
-}

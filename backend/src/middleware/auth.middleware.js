@@ -22,14 +22,10 @@ export const authMiddleware = (req, res, next) => {
 
 // ─── Role guards ──────────────────────────────────────────────────────────────
 
-const ROLES = Object.freeze({ ADMIN: 'admin', MANAGER: 'manager', EMPLOYEE: 'employee' });
+const ROLES = Object.freeze({ ADMIN: 'admin' });
 
-export const requireAdmin = (req, res, next) =>
+export const requireAdminAccess = (req, res, next) =>
   req.user?.role === ROLES.ADMIN
     ? next()
     : forbidden(res, 'ต้องการสิทธิ์ผู้ดูแลระบบ');
 
-export const requireManager = (req, res, next) =>
-  [ROLES.ADMIN, ROLES.MANAGER].includes(req.user?.role)
-    ? next()
-    : forbidden(res, 'ต้องการสิทธิ์ผู้จัดการขึ้นไป');

@@ -21,7 +21,7 @@ import useAuthStore from '../store/authStore';
 import { useDebounce } from '../hooks/useDebounce';
 
 export default function OvertimePage() {
-  const { user, isManager } = useAuthStore();
+  const { user, isAdmin } = useAuthStore();
   const queryClient = useQueryClient();
 
   const [activeTab, setActiveTab] = useState('my');
@@ -52,7 +52,7 @@ export default function OvertimePage() {
         search: debouncedSearch || undefined,
         status: statusFilter || undefined,
       }),
-    enabled: isManager() && activeTab === 'manage',
+    enabled: isAdmin() && activeTab === 'manage',
   });
 
   // Mutations
@@ -125,11 +125,15 @@ export default function OvertimePage() {
         {/* Header & Tabs */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">ขอทำงานล่วงเวลา (OT)</h1>
-            <p className="text-gray-500 text-sm mt-1">ยื่นคำขอ OT และตรวจสอบสถานะการอนุมัติ</p>
+            <h1 className="text-2xl font-bold text-gray-900">
+              ขอทำงานล่วงเวลา (OT)
+            </h1>
+            <p className="text-gray-500 text-sm mt-1">
+              ยื่นคำขอ OT และตรวจสอบสถานะการอนุมัติ
+            </p>
           </div>
 
-          {isManager() && (
+          {isAdmin() && (
             <div className="flex bg-gray-200/80 p-1 rounded-xl">
               <button
                 onClick={() => setActiveTab('my')}
@@ -161,7 +165,9 @@ export default function OvertimePage() {
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
               <div className="flex items-center gap-2 mb-6">
                 <Briefcase className="w-5 h-5 text-indigo-600" />
-                <h2 className="font-bold text-lg text-gray-900">แบบฟอร์มขอทำล่วงเวลา</h2>
+                <h2 className="font-bold text-lg text-gray-900">
+                  แบบฟอร์มขอทำล่วงเวลา
+                </h2>
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-5">
@@ -176,7 +182,9 @@ export default function OvertimePage() {
                       required
                       className="w-full border border-gray-300 rounded-xl pl-10 pr-3 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition"
                       value={form.workDate}
-                      onChange={(e) => setForm({ ...form, workDate: e.target.value })}
+                      onChange={(e) =>
+                        setForm({ ...form, workDate: e.target.value })
+                      }
                     />
                   </div>
                 </div>
@@ -193,7 +201,9 @@ export default function OvertimePage() {
                         required
                         className="w-full border border-gray-300 rounded-xl pl-10 pr-3 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition"
                         value={form.startTime}
-                        onChange={(e) => setForm({ ...form, startTime: e.target.value })}
+                        onChange={(e) =>
+                          setForm({ ...form, startTime: e.target.value })
+                        }
                       />
                     </div>
                   </div>
@@ -209,7 +219,9 @@ export default function OvertimePage() {
                         required
                         className="w-full border border-gray-300 rounded-xl pl-10 pr-3 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition"
                         value={form.endTime}
-                        onChange={(e) => setForm({ ...form, endTime: e.target.value })}
+                        onChange={(e) =>
+                          setForm({ ...form, endTime: e.target.value })
+                        }
                       />
                     </div>
                   </div>
@@ -225,7 +237,9 @@ export default function OvertimePage() {
                     placeholder="ระบุรายละเอียดงานหรือภารกิจช่วงล่วงเวลา..."
                     className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition"
                     value={form.reason}
-                    onChange={(e) => setForm({ ...form, reason: e.target.value })}
+                    onChange={(e) =>
+                      setForm({ ...form, reason: e.target.value })
+                    }
                   />
                 </div>
 
@@ -235,7 +249,9 @@ export default function OvertimePage() {
                   className="bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white font-medium px-6 py-2.5 rounded-xl flex items-center gap-2 transition shadow-md shadow-indigo-100"
                 >
                   <Send className="w-4 h-4" />
-                  {createMutation.isPending ? 'กำลังส่งข้อมูล...' : 'ส่งคำขอ OT'}
+                  {createMutation.isPending
+                    ? 'กำลังส่งข้อมูล...'
+                    : 'ส่งคำขอ OT'}
                 </button>
               </form>
             </div>
@@ -244,13 +260,19 @@ export default function OvertimePage() {
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
               <div className="flex items-center gap-2 mb-5">
                 <Clock className="w-5 h-5 text-indigo-600" />
-                <h2 className="font-bold text-lg text-gray-900">ประวัติการขอ OT ของฉัน</h2>
+                <h2 className="font-bold text-lg text-gray-900">
+                  ประวัติการขอ OT ของฉัน
+                </h2>
               </div>
 
               {loadingMy ? (
-                <div className="py-8 text-center text-gray-400">กำลังโหลดข้อมูล...</div>
+                <div className="py-8 text-center text-gray-400">
+                  กำลังโหลดข้อมูล...
+                </div>
               ) : myOTList.length === 0 ? (
-                <div className="py-8 text-center text-gray-400">ยังไม่มีประวัติการขอ OT</div>
+                <div className="py-8 text-center text-gray-400">
+                  ยังไม่มีประวัติการขอ OT
+                </div>
               ) : (
                 <div className="divide-y divide-gray-100">
                   {myOTList.map((item) => (
@@ -260,13 +282,17 @@ export default function OvertimePage() {
                     >
                       <div>
                         <div className="flex items-center gap-2">
-                          <span className="font-bold text-gray-900">วันที่: {item.work_date}</span>
+                          <span className="font-bold text-gray-900">
+                            วันที่: {item.work_date}
+                          </span>
                           <span className="text-xs text-indigo-600 font-semibold bg-indigo-50 px-2.5 py-0.5 rounded-full">
                             {item.start_time} - {item.end_time}
                           </span>
                         </div>
                         {item.reason && (
-                          <p className="text-sm text-gray-600 mt-1">รายละเอียด: {item.reason}</p>
+                          <p className="text-sm text-gray-600 mt-1">
+                            รายละเอียด: {item.reason}
+                          </p>
                         )}
                       </div>
 
@@ -308,9 +334,13 @@ export default function OvertimePage() {
             </div>
 
             {loadingAll ? (
-              <div className="py-12 text-center text-gray-400">กำลังค้นหาข้อมูล...</div>
+              <div className="py-12 text-center text-gray-400">
+                กำลังค้นหาข้อมูล...
+              </div>
             ) : allOTList.length === 0 ? (
-              <div className="py-12 text-center text-gray-400">ไม่พบคำขอ OT</div>
+              <div className="py-12 text-center text-gray-400">
+                ไม่พบคำขอ OT
+              </div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-sm">
@@ -332,23 +362,31 @@ export default function OvertimePage() {
                             {item.users?.first_name} {item.users?.last_name}
                           </p>
                           <p className="text-xs text-gray-400">
-                            {item.users?.employee_code} • {item.users?.department}
+                            {item.users?.employee_code} •{' '}
+                            {item.users?.department}
                           </p>
                         </td>
-                        <td className="py-3.5 px-4 text-gray-800">{item.work_date}</td>
+                        <td className="py-3.5 px-4 text-gray-800">
+                          {item.work_date}
+                        </td>
                         <td className="py-3.5 px-4 text-gray-600">
                           {item.start_time} - {item.end_time}
                         </td>
                         <td className="py-3.5 px-4 text-gray-500 max-w-xs truncate">
                           {item.reason || '-'}
                         </td>
-                        <td className="py-3.5 px-4">{renderStatusBadge(item.status)}</td>
+                        <td className="py-3.5 px-4">
+                          {renderStatusBadge(item.status)}
+                        </td>
                         <td className="py-3.5 px-4 text-right space-x-2">
                           {item.status === 'pending' ? (
                             <>
                               <button
                                 onClick={() =>
-                                  updateStatusMutation.mutate({ id: item.id, status: 'approved' })
+                                  updateStatusMutation.mutate({
+                                    id: item.id,
+                                    status: 'approved',
+                                  })
                                 }
                                 disabled={updateStatusMutation.isPending}
                                 className="px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-medium transition"
@@ -357,7 +395,10 @@ export default function OvertimePage() {
                               </button>
                               <button
                                 onClick={() =>
-                                  updateStatusMutation.mutate({ id: item.id, status: 'rejected' })
+                                  updateStatusMutation.mutate({
+                                    id: item.id,
+                                    status: 'rejected',
+                                  })
                                 }
                                 disabled={updateStatusMutation.isPending}
                                 className="px-3 py-1 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-xs font-medium transition"
@@ -366,7 +407,9 @@ export default function OvertimePage() {
                               </button>
                             </>
                           ) : (
-                            <span className="text-xs text-gray-400">ดำเนินการแล้ว</span>
+                            <span className="text-xs text-gray-400">
+                              ดำเนินการแล้ว
+                            </span>
                           )}
                         </td>
                       </tr>

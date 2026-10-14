@@ -2,7 +2,7 @@
 import { ok, badRequest, notFound, serverError } from '../utils/response.js';
 
 const USER_FIELDS = 'id, employee_code, first_name, last_name, email, department, position, role, is_active, created_at';
-const ROLES = ['employee', 'manager', 'admin'];
+const ROLES = ['employee', 'admin'];
 
 export const listUsers = async (_req, res) => {
   try {

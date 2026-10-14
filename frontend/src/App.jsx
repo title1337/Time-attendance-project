@@ -5,7 +5,6 @@ import {
   PrivateRoute,
   PublicRoute,
   AdminRoute,
-  ManagerRoute,
 } from './components/guards/RouteGuards';
 import LoginPage from './pages/auth/LoginPage';
 import RegisterPage from './pages/auth/RegisterPage';
@@ -51,7 +50,7 @@ function App() {
             <Route path="/admin/users" element={<UsersPage />} />
           </Route>
 
-          <Route element={<ManagerRoute />}>
+          <Route element={<AdminRoute />}>
             <Route path="/admin/reports" element={<ReportsPage />} />
           </Route>
 
