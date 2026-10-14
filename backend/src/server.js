@@ -8,6 +8,8 @@ import authRoutes from './routes/auth.routes.js';
 import attendanceRoutes from './routes/attendance.routes.js';
 import leaveRoutes from './routes/leave.routes.js';
 import overtimeRoutes from './routes/overtime.routes.js';
+import usersRoutes from './routes/users.routes.js';
+import reportRoutes from './routes/report.routes.js';
 
 // ─── Validate required env vars at startup ────────────────────────────────────
 const REQUIRED_ENV = ['JWT_SECRET', 'SUPABASE_URL', 'SUPABASE_SERVICE_KEY'];
@@ -73,6 +75,8 @@ app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api/attendance', attendanceRoutes);
 app.use('/api/leave', leaveRoutes);
 app.use('/api/overtime', overtimeRoutes);
+app.use('/api/users', usersRoutes);
+app.use('/api/reports', reportRoutes);
 
 // ─── 404 & Error handlers ─────────────────────────────────────────────────────
 app.use((req, res) =>

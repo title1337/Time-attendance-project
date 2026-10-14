@@ -5,6 +5,7 @@ import {
   PrivateRoute,
   PublicRoute,
   AdminRoute,
+  ManagerRoute,
 } from './components/guards/RouteGuards';
 import LoginPage from './pages/auth/LoginPage';
 import RegisterPage from './pages/auth/RegisterPage';
@@ -12,6 +13,8 @@ import DashboardPage from './pages/DashboardPage';
 import AttendancePage from './pages/AttendancePage';
 import LeavePage from './pages/LeavePage';
 import OvertimePage from './pages/OvertimePage';
+import UsersPage from './pages/UsersPage';
+import ReportsPage from './pages/ReportsPage';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -44,9 +47,12 @@ function App() {
             <Route path="/overtime" element={<OvertimePage />} />
           </Route>
 
-          {/* Admin routes */}
           <Route element={<AdminRoute />}>
-            {/* Future extension */}
+            <Route path="/admin/users" element={<UsersPage />} />
+          </Route>
+
+          <Route element={<ManagerRoute />}>
+            <Route path="/admin/reports" element={<ReportsPage />} />
           </Route>
 
           {/* Catch all */}
