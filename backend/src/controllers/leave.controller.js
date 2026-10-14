@@ -8,7 +8,7 @@ import {
 } from '../utils/response.js';
 import supabase from '../config/supabase.js';
 
-const ALLOWED_LEAVE_TYPES = Object.freeze(['annual', 'sick', 'personal']);
+const ALLOWED_LEAVE_TYPES = Object.freeze(['vacation', 'sick', 'personal']);
 const ALLOWED_STATUSES = Object.freeze(['pending', 'approved', 'rejected']);
 
 /**
