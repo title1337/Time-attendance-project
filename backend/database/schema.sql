@@ -45,14 +45,15 @@ CREATE TABLE IF NOT EXISTS attendance_records (
 CREATE TABLE IF NOT EXISTS leave_requests (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  leave_type VARCHAR(50) NOT NULL,
+  leave_type VARCHAR(50) NOT NULL CHECK (leave_type IN ('sick', 'personal', 'vacation', 'maternity', 'other')),
   start_date DATE NOT NULL,
   end_date DATE NOT NULL,
   reason TEXT,
   status VARCHAR(20) DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
   approved_by UUID REFERENCES users(id),
   approved_at TIMESTAMPTZ,
-  created_at TIMESTAMPTZ DEFAULT NOW()
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  CONSTRAINT leave_requests_date_range_check CHECK (end_date >= start_date)
 );
 
 -- Holidays table
