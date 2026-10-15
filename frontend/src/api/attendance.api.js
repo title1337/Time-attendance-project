@@ -17,12 +17,19 @@ export const attendanceApi = {
   },
 
   getMyHistory: async (params) => {
-    const response = await axiosInstance.get('/attendance/my-history', { params });
+    const response = await axiosInstance.get('/attendance/my-history', {
+      params,
+    });
     return response.data;
   },
 
   getAll: async (params) => {
     const response = await axiosInstance.get('/attendance', { params });
+    return response.data;
+  },
+
+  updateRecord: async (id, payload) => {
+    const response = await axiosInstance.patch(`/attendance/${id}`, payload);
     return response.data;
   },
 };

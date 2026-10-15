@@ -4,6 +4,7 @@ import {
   checkOut,
   getTodayStatus,
   getMyHistory,
+  updateRecord,
 } from '../controllers/attendance.controller.js';
 import { authMiddleware } from '../middleware/auth.middleware.js';
 
@@ -16,5 +17,6 @@ router.post('/checkin', checkIn);
 router.post('/checkout', checkOut);
 router.get('/today', getTodayStatus);
 router.get('/my-history', getMyHistory);
+router.patch('/:id', updateRecord);
 
 export default router;

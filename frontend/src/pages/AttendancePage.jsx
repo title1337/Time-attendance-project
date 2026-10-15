@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { th } from 'date-fns/locale';
 import * as XLSX from 'xlsx';
@@ -14,6 +14,8 @@ import {
   XCircle,
   FileSpreadsheet,
   Download,
+  Pencil, // [เพิ่ม] ไอคอนปุ่มแก้ไข
+  X, // [เพิ่ม] ไอคอนปิด modal
 } from 'lucide-react';
 import MainLayout from '../components/layout/MainLayout';
 import { attendanceApi } from '../api/attendance.api';
@@ -30,6 +32,7 @@ const STATUS_LABELS = Object.freeze({
 export default function AttendancePage() {
   const { user } = useAuthStore();
   const today = new Date();
+  const queryClient = useQueryClient(); // [เพิ่ม]
 
   const [selectedMonth, setSelectedMonth] = useState(
     String(today.getMonth() + 1),
@@ -37,6 +40,14 @@ export default function AttendancePage() {
   const [selectedYear, setSelectedYear] = useState(String(today.getFullYear()));
   const [searchTerm, setSearchTerm] = useState('');
   const debouncedSearch = useDebounce(searchTerm, 350);
+
+  // [เพิ่ม] state สำหรับ modal แก้ไข
+  const [editingRecord, setEditingRecord] = useState(null);
+  const [editForm, setEditForm] = useState({
+    check_in_time: '',
+    check_out_time: '',
+    note: '',
+  });
 
   // Query my attendance history
   const { data: historyData, isLoading } = useQuery({
@@ -47,6 +58,21 @@ export default function AttendancePage() {
         year: selectedYear,
         limit: 31,
       }),
+  });
+
+  // [เพิ่ม] mutation สำหรับบันทึกการแก้ไข
+  const updateMutation = useMutation({
+    mutationFn: ({ id, payload }) => attendanceApi.updateRecord(id, payload),
+    onSuccess: () => {
+      toast.success('แก้ไขเวลาเรียบร้อยแล้ว');
+      queryClient.invalidateQueries({ queryKey: ['attendance', 'history'] });
+      setEditingRecord(null);
+    },
+    onError: (error) => {
+      const serverMessage = error?.response?.data?.message;
+      const fallbackMessage = 'ไม่สามารถแก้ไขเวลาได้';
+      toast.error(serverMessage || fallbackMessage);
+    },
   });
 
   const rawRecords = historyData?.data || [];
@@ -61,6 +87,48 @@ export default function AttendancePage() {
       rec.note?.toLowerCase().includes(q)
     );
   });
+
+  // [เพิ่ม] เปิด modal พร้อมใส่ค่าเดิมของรายการนั้น
+  const handleOpenEdit = (rec) => {
+    const checkIn = rec.check_in_time ? rec.check_in_time.slice(0, 5) : '';
+    const checkOut = rec.check_out_time ? rec.check_out_time.slice(0, 5) : '';
+
+    setEditForm({
+      check_in_time: checkIn,
+      check_out_time: checkOut,
+      note: rec.note || '',
+    });
+    setEditingRecord(rec);
+  };
+
+  // [เพิ่ม] ตรวจข้อมูลแล้วส่งไปบันทึก
+  const handleSubmitEdit = (e) => {
+    e.preventDefault();
+
+    const { check_in_time, check_out_time, note } = editForm;
+
+    if (!check_in_time) {
+      toast.error('กรุณากรอกเวลาเข้างาน');
+      return;
+    }
+
+    const hasCheckOut = Boolean(check_out_time);
+
+    if (hasCheckOut && check_out_time <= check_in_time) {
+      toast.error('เวลาออกงานต้องมากกว่าเวลาเข้างาน');
+      return;
+    }
+
+    const trimmedNote = note.trim();
+
+    const payload = {
+      check_in_time,
+      check_out_time: hasCheckOut ? check_out_time : null,
+      note: trimmedNote || null,
+    };
+
+    updateMutation.mutate({ id: editingRecord.id, payload });
+  };
 
   /**
    * Export attendance records to Excel (.xlsx)
@@ -249,6 +317,8 @@ export default function AttendancePage() {
                     <th className="py-3 px-4">ชั่วโมงทำงาน</th>
                     <th className="py-3 px-4">สถานะ</th>
                     <th className="py-3 px-4">หมายเหตุ</th>
+                    {/* [เพิ่ม] หัวคอลัมน์จัดการ */}
+                    <th className="py-3 px-4 text-center">จัดการ</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
@@ -293,6 +363,17 @@ export default function AttendancePage() {
                         <td className="py-3.5 px-4 text-gray-400 text-xs truncate max-w-xs">
                           {rec.note || '-'}
                         </td>
+                        {/* [เพิ่ม] ปุ่มแก้ไข */}
+                        <td className="py-3.5 px-4 text-center">
+                          <button
+                            type="button"
+                            onClick={() => handleOpenEdit(rec)}
+                            className="inline-flex items-center gap-1 text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 px-2.5 py-1.5 rounded-lg text-xs font-medium transition"
+                          >
+                            <Pencil className="w-3.5 h-3.5" />
+                            แก้ไข
+                          </button>
+                        </td>
                       </tr>
                     );
                   })}
@@ -302,6 +383,84 @@ export default function AttendancePage() {
           )}
         </div>
       </div>
+
+      {/* [เพิ่ม] Modal แก้ไขเวลา */}
+      {editingRecord && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <form
+            onSubmit={handleSubmitEdit}
+            className="bg-white w-full max-w-md rounded-2xl shadow-xl p-6 space-y-4"
+          >
+            <div className="flex items-center justify-between">
+              <h3 className="font-bold text-gray-900">
+                แก้ไขเวลา {editingRecord.work_date}
+              </h3>
+              <button
+                type="button"
+                onClick={() => setEditingRecord(null)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <label className="text-sm text-gray-600">
+                เวลาเข้างาน
+                <input
+                  type="time"
+                  value={editForm.check_in_time}
+                  onChange={(e) =>
+                    setEditForm({ ...editForm, check_in_time: e.target.value })
+                  }
+                  className="mt-1 w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+                />
+              </label>
+
+              <label className="text-sm text-gray-600">
+                เวลาออกงาน
+                <input
+                  type="time"
+                  value={editForm.check_out_time}
+                  onChange={(e) =>
+                    setEditForm({ ...editForm, check_out_time: e.target.value })
+                  }
+                  className="mt-1 w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+                />
+              </label>
+            </div>
+
+            <label className="block text-sm text-gray-600">
+              หมายเหตุ (เหตุผลที่แก้ไข)
+              <textarea
+                rows={3}
+                value={editForm.note}
+                onChange={(e) =>
+                  setEditForm({ ...editForm, note: e.target.value })
+                }
+                className="mt-1 w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+              />
+            </label>
+
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setEditingRecord(null)}
+                className="px-4 py-2 rounded-xl text-sm text-gray-600 hover:bg-gray-100"
+              >
+                ยกเลิก
+              </button>
+              <button
+                type="submit"
+                disabled={updateMutation.isPending}
+                className="px-4 py-2 rounded-xl text-sm text-white bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-300"
+              >
+                {updateMutation.isPending ? 'กำลังบันทึก...' : 'บันทึก'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
     </MainLayout>
   );
 }

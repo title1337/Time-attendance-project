@@ -142,3 +142,105 @@ export const getMyHistory = async (req, res) => {
     return serverError(res, error, 'getMyHistory');
   }
 };
+
+/** Matches 24-hour time in HH:MM format */
+const TIME_PATTERN = /^([01]\d|2[0-3]):[0-5]\d$/;
+const MAX_NOTE_LENGTH = 255;
+
+/** PATCH /api/attendance/:id */
+export const updateRecord = async (req, res) => {
+  const { id: userId } = req.user;
+  const { id: recordId } = req.params;
+  const { check_in_time, check_out_time, note } = req.body;
+
+  const checkInText = String(check_in_time || '');
+  const isCheckInValid = TIME_PATTERN.test(checkInText);
+
+  if (!isCheckInValid) {
+    return badRequest(res, 'รูปแบบเวลาเข้างานไม่ถูกต้อง (HH:MM)');
+  }
+
+  const hasCheckOut = Boolean(check_out_time);
+
+  if (hasCheckOut) {
+    const checkOutText = String(check_out_time);
+    const isCheckOutValid = TIME_PATTERN.test(checkOutText);
+
+    if (!isCheckOutValid) {
+      return badRequest(res, 'รูปแบบเวลาออกงานไม่ถูกต้อง (HH:MM)');
+    }
+
+    const isOutAfterIn = checkOutText > checkInText;
+
+    if (!isOutAfterIn) {
+      return badRequest(res, 'เวลาออกงานต้องมากกว่าเวลาเข้างาน');
+    }
+  }
+
+  const trimmedNote = typeof note === 'string' ? note.trim() : '';
+
+  if (trimmedNote.length > MAX_NOTE_LENGTH) {
+    return badRequest(res, `หมายเหตุต้องไม่เกิน ${MAX_NOTE_LENGTH} ตัวอักษร`);
+  }
+
+  try {
+    // Ownership check: only the record owner can edit
+    const { data: existing, error: findError } = await supabase
+      .from('attendance_records')
+      .select('id, check_in_time, check_out_time, note')
+      .eq('id', recordId)
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (findError) {
+      throw findError;
+    }
+
+    if (!existing) {
+      return res
+        .status(404)
+        .json({ success: false, message: 'ไม่พบรายการลงเวลา' });
+    }
+
+    const newValues = {
+      check_in_time: `${checkInText}:00`,
+      check_out_time: hasCheckOut ? `${check_out_time}:00` : null,
+      note: trimmedNote || null,
+    };
+
+    const oldValues = {
+      check_in_time: existing.check_in_time,
+      check_out_time: existing.check_out_time,
+      note: existing.note,
+    };
+
+    const { data: updated, error: updateError } = await supabase
+      .from('attendance_records')
+      .update(newValues)
+      .eq('id', recordId)
+      .eq('user_id', userId)
+      .select()
+      .single();
+
+    if (updateError) {
+      throw updateError;
+    }
+
+    const { error: logError } = await supabase
+      .from('attendance_edit_logs')
+      .insert({
+        attendance_id: existing.id,
+        edited_by: userId,
+        old_values: oldValues,
+        new_values: newValues,
+      });
+
+    if (logError) {
+      throw logError;
+    }
+
+    return ok(res, { message: 'แก้ไขเวลาสำเร็จ', data: updated });
+  } catch (error) {
+    return serverError(res, error, 'updateRecord');
+  }
+};
