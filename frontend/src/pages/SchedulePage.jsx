@@ -46,6 +46,12 @@ export default function SchedulePage() {
   const [assignModalUser, setAssignModalUser] = useState(null);
   const [selectedShiftId, setSelectedShiftId] = useState('');
   const [effectiveDate, setEffectiveDate] = useState('');
+  const [assignmentMode, setAssignmentMode] = useState('preset'); // 'preset' | 'custom'
+  const [customShiftForm, setCustomShiftForm] = useState({
+    shift_name: '',
+    start_time: '09:00',
+    end_time: '18:00',
+  });
 
   // Queries
   const { data: shiftsData, isLoading: loadingShifts } = useQuery({
@@ -144,19 +150,41 @@ export default function SchedulePage() {
     setAssignModalUser(employee);
     setSelectedShiftId(employee.shift_id || shiftsData?.data?.[0]?.id || '');
     setEffectiveDate(employee.effective_date || new Date().toISOString().split('T')[0]);
+    setAssignmentMode('preset');
+    setCustomShiftForm({
+      shift_name: '',
+      start_time: employee?.shift?.start_time ? formatTime(employee.shift.start_time) : '09:00',
+      end_time: employee?.shift?.end_time ? formatTime(employee.shift.end_time) : '18:00',
+    });
   };
 
   const handleSaveAssignment = (e) => {
     e.preventDefault();
-    if (!selectedShiftId) {
-      toast.error('กรุณาเลือกกะการทำงาน');
-      return;
+
+    if (assignmentMode === 'custom') {
+      if (!customShiftForm.start_time || !customShiftForm.end_time) {
+        toast.error('กรุณาระบุเวลาเริ่มงานและเลิกงานให้ครบถ้วน');
+        return;
+      }
+      assignMutation.mutate({
+        user_id: assignModalUser.id,
+        is_custom: true,
+        custom_name: customShiftForm.shift_name,
+        custom_start_time: customShiftForm.start_time,
+        custom_end_time: customShiftForm.end_time,
+        effective_date: effectiveDate,
+      });
+    } else {
+      if (!selectedShiftId) {
+        toast.error('กรุณาเลือกกะการทำงาน');
+        return;
+      }
+      assignMutation.mutate({
+        user_id: assignModalUser.id,
+        shift_id: selectedShiftId,
+        effective_date: effectiveDate,
+      });
     }
-    assignMutation.mutate({
-      user_id: assignModalUser.id,
-      shift_id: selectedShiftId,
-      effective_date: effectiveDate,
-    });
   };
 
   const shifts = shiftsData?.data || [];
@@ -532,43 +560,128 @@ export default function SchedulePage() {
               </p>
 
               <form onSubmit={handleSaveAssignment} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    เลือกกะการทำงาน <span className="text-rose-500">*</span>
-                  </label>
-                  <div className="space-y-2">
-                    {shifts.map((s) => (
-                      <label
-                        key={s.id}
-                        className={`flex items-center justify-between p-3 border rounded-xl cursor-pointer transition ${
-                          selectedShiftId === s.id
-                            ? 'border-indigo-600 bg-indigo-50/70 text-indigo-900'
-                            : 'border-gray-200 hover:bg-gray-50'
-                        }`}
-                      >
-                        <div className="flex items-center gap-3">
-                          <input
-                            type="radio"
-                            name="selectedShift"
-                            value={s.id}
-                            checked={selectedShiftId === s.id}
-                            onChange={() => setSelectedShiftId(s.id)}
-                            className="text-indigo-600 focus:ring-indigo-500"
-                          />
-                          <div>
-                            <span className="font-semibold block text-sm">{s.shift_name}</span>
-                            <span className="text-xs text-gray-500 font-mono">
-                              {formatTime(s.start_time)} - {formatTime(s.end_time)} น.
-                            </span>
-                          </div>
-                        </div>
-                        {selectedShiftId === s.id && (
-                          <CheckCircle className="w-5 h-5 text-indigo-600" />
-                        )}
-                      </label>
-                    ))}
-                  </div>
+                {/* Switch between Preset Shift and Custom Working Time */}
+                <div className="flex bg-gray-100 p-1 rounded-xl">
+                  <button
+                    type="button"
+                    onClick={() => setAssignmentMode('preset')}
+                    className={`flex-1 py-2 text-xs font-bold rounded-lg transition ${
+                      assignmentMode === 'preset'
+                        ? 'bg-white text-indigo-600 shadow-sm'
+                        : 'text-gray-500 hover:text-gray-900'
+                    }`}
+                  >
+                    เลือกจากกะที่มีอยู่ ({shifts.length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAssignmentMode('custom')}
+                    className={`flex-1 py-2 text-xs font-bold rounded-lg transition ${
+                      assignmentMode === 'custom'
+                        ? 'bg-white text-indigo-600 shadow-sm'
+                        : 'text-gray-500 hover:text-gray-900'
+                    }`}
+                  >
+                    ⏰ กำหนดเวลาเอง
+                  </button>
                 </div>
+
+                {/* Option A: Preset Shift */}
+                {assignmentMode === 'preset' && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      เลือกกะการทำงาน <span className="text-rose-500">*</span>
+                    </label>
+                    <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                      {shifts.map((s) => (
+                        <label
+                          key={s.id}
+                          className={`flex items-center justify-between p-3 border rounded-xl cursor-pointer transition ${
+                            selectedShiftId === s.id
+                              ? 'border-indigo-600 bg-indigo-50/70 text-indigo-900'
+                              : 'border-gray-200 hover:bg-gray-50'
+                          }`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <input
+                              type="radio"
+                              name="selectedShift"
+                              value={s.id}
+                              checked={selectedShiftId === s.id}
+                              onChange={() => setSelectedShiftId(s.id)}
+                              className="text-indigo-600 focus:ring-indigo-500"
+                            />
+                            <div>
+                              <span className="font-semibold block text-sm">{s.shift_name}</span>
+                              <span className="text-xs text-gray-500 font-mono">
+                                {formatTime(s.start_time)} - {formatTime(s.end_time)} น.
+                              </span>
+                            </div>
+                          </div>
+                          {selectedShiftId === s.id && (
+                            <CheckCircle className="w-5 h-5 text-indigo-600" />
+                          )}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Option B: Custom Working Time (เลือกเวลาการทำงานได้เอง) */}
+                {assignmentMode === 'custom' && (
+                  <div className="bg-indigo-50/60 border border-indigo-100 rounded-2xl p-4 space-y-3">
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-700 mb-1">
+                        ชื่อกะ / หมายเหตุเวลา (ระบุหรือไม่ก็ได้)
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="เช่น กะพิเศษของฉัน, เวลาทำงานยืดหยุ่น"
+                        className="w-full bg-white border border-gray-300 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+                        value={customShiftForm.shift_name}
+                        onChange={(e) =>
+                          setCustomShiftForm({ ...customShiftForm, shift_name: e.target.value })
+                        }
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-700 mb-1">
+                          เวลาเริ่มงาน <span className="text-rose-500">*</span>
+                        </label>
+                        <input
+                          type="time"
+                          required={assignmentMode === 'custom'}
+                          className="w-full bg-white border border-gray-300 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none font-mono font-semibold text-indigo-900"
+                          value={customShiftForm.start_time}
+                          onChange={(e) =>
+                            setCustomShiftForm({ ...customShiftForm, start_time: e.target.value })
+                          }
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-700 mb-1">
+                          เวลาเลิกงาน <span className="text-rose-500">*</span>
+                        </label>
+                        <input
+                          type="time"
+                          required={assignmentMode === 'custom'}
+                          className="w-full bg-white border border-gray-300 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none font-mono font-semibold text-indigo-900"
+                          value={customShiftForm.end_time}
+                          onChange={(e) =>
+                            setCustomShiftForm({ ...customShiftForm, end_time: e.target.value })
+                          }
+                        />
+                      </div>
+                    </div>
+
+                    <p className="text-xs text-indigo-700/80 leading-relaxed">
+                      💡 เมื่อกำหนดเวลาทำงานเอง หากลงเวลาเข้างานหลังเวลา <span className="font-bold underline">{customShiftForm.start_time || '--:--'} น.</span> ระบบจะนับว่า <b>"สาย"</b> อัตโนมัติ
+                    </p>
+                  </div>
+                )}
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">

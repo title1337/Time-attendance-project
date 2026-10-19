@@ -37,13 +37,9 @@ export const scheduleApi = {
     return response.data;
   },
 
-  // Assign or update shift for user
-  assignShift: async ({ user_id, shift_id, effective_date }) => {
-    const response = await axiosInstance.post('/schedules/assign', {
-      user_id,
-      shift_id,
-      effective_date,
-    });
+  // Assign or update shift for user (supports pre-set shifts or custom time)
+  assignShift: async (payload) => {
+    const response = await axiosInstance.post('/schedules/assign', payload);
     return response.data;
   },
 };

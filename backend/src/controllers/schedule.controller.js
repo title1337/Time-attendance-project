@@ -264,21 +264,71 @@ export const getAllUserShifts = async (_req, res) => {
  */
 export const assignUserShift = async (req, res) => {
   const { id: currentUserId, role } = req.user;
-  const { user_id, shift_id, effective_date } = req.body;
+  const {
+    user_id,
+    shift_id,
+    effective_date,
+    is_custom,
+    custom_name,
+    custom_start_time,
+    custom_end_time,
+  } = req.body;
 
   // If not admin, employees can only assign/update their own shift
   const targetUserId = role === 'admin' ? (user_id || currentUserId) : currentUserId;
 
-  if (!shift_id) {
-    return badRequest(res, 'กรุณาเลือกกะการทำงาน');
-  }
+  let assignedShiftId = shift_id;
 
   try {
+    // If user provided a custom work time (เลือกเวลาการทำงานได้เอง)
+    if (is_custom || (!shift_id && custom_start_time && custom_end_time)) {
+      if (!custom_start_time || !TIME_REGEX.test(custom_start_time)) {
+        return badRequest(res, 'กรุณาระบุเวลาเริ่มงานที่ถูกต้อง (HH:MM)');
+      }
+      if (!custom_end_time || !TIME_REGEX.test(custom_end_time)) {
+        return badRequest(res, 'กรุณาระบุเวลาเลิกงานที่ถูกต้อง (HH:MM)');
+      }
+
+      const formattedStart = formatTimeToSeconds(custom_start_time);
+      const formattedEnd = formatTimeToSeconds(custom_end_time);
+      const shiftName = custom_name?.trim() || `กำหนดเอง (${custom_start_time.slice(0, 5)} - ${custom_end_time.slice(0, 5)})`;
+
+      // Check if an identical shift already exists or create new
+      const { data: existingShift } = await supabase
+        .from('shifts')
+        .select('id')
+        .eq('start_time', formattedStart)
+        .eq('end_time', formattedEnd)
+        .limit(1)
+        .maybeSingle();
+
+      if (existingShift?.id) {
+        assignedShiftId = existingShift.id;
+      } else {
+        const { data: newShift, error: createError } = await supabase
+          .from('shifts')
+          .insert({
+            shift_name: shiftName,
+            start_time: formattedStart,
+            end_time: formattedEnd,
+          })
+          .select('id')
+          .single();
+
+        if (createError) throw createError;
+        assignedShiftId = newShift.id;
+      }
+    }
+
+    if (!assignedShiftId) {
+      return badRequest(res, 'กรุณาเลือกกะการทำงานหรือระบุเวลาที่กำหนดเอง');
+    }
+
     // Validate that shift exists
     const { data: shift, error: shiftFindError } = await supabase
       .from('shifts')
       .select('id, shift_name')
-      .eq('id', shift_id)
+      .eq('id', assignedShiftId)
       .maybeSingle();
 
     if (shiftFindError || !shift) {
@@ -297,7 +347,7 @@ export const assignUserShift = async (req, res) => {
       const { data, error } = await supabase
         .from('user_shifts')
         .update({
-          shift_id,
+          shift_id: assignedShiftId,
           effective_date: effective_date || null,
         })
         .eq('id', existing.id)
@@ -317,7 +367,7 @@ export const assignUserShift = async (req, res) => {
         .from('user_shifts')
         .insert({
           user_id: targetUserId,
-          shift_id,
+          shift_id: assignedShiftId,
           effective_date: effective_date || null,
         })
         .select(`
