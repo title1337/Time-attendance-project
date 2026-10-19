@@ -12,6 +12,7 @@ import DashboardPage from './pages/DashboardPage';
 import AttendancePage from './pages/AttendancePage';
 import LeavePage from './pages/LeavePage';
 import OvertimePage from './pages/OvertimePage';
+import SchedulePage from './pages/SchedulePage';
 import UsersPage from './pages/UsersPage';
 import ReportsPage from './pages/ReportsPage';
 
@@ -42,6 +43,7 @@ function App() {
           <Route element={<PrivateRoute />}>
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/attendance" element={<AttendancePage />} />
+            <Route path="/schedule" element={<SchedulePage />} />
             <Route path="/leave" element={<LeavePage />} />
             <Route path="/overtime" element={<OvertimePage />} />
           </Route>

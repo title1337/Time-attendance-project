@@ -34,20 +34,58 @@ export const checkIn = async (req, res) => {
 
     if (existing) return badRequest(res, 'ลงเวลาเข้างานวันนี้แล้ว');
 
+    // Find assigned shift for this user to check for late attendance
+    let isLate = false;
+    let assignedShift = null;
+
+    const { data: userShift } = await supabase
+      .from('user_shifts')
+      .select('shifts:shift_id (id, shift_name, start_time, end_time)')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (userShift?.shifts?.start_time) {
+      assignedShift = userShift.shifts;
+    } else {
+      // Default standard shift if none assigned
+      const { data: defaultShift } = await supabase
+        .from('shifts')
+        .select('*')
+        .order('created_at', { ascending: true })
+        .limit(1)
+        .maybeSingle();
+      if (defaultShift) assignedShift = defaultShift;
+    }
+
+    if (assignedShift?.start_time) {
+      // Compare checkInTime with shift start_time (HH:MM:SS)
+      if (checkInTime > assignedShift.start_time) {
+        isLate = true;
+      }
+    }
+
+    const attendanceStatus = isLate ? 'late' : 'present';
+
     const { data: record, error } = await supabase
       .from('attendance_records')
       .insert({
         user_id: userId,
         work_date: workDate,
         check_in_time: checkInTime,
-        status: 'present',
+        status: attendanceStatus,
       })
       .select()
       .single();
 
     if (error) throw error;
 
-    return created(res, { message: 'ลงเวลาเข้างานสำเร็จ', data: record });
+    const message = isLate
+      ? `ลงเวลาเข้างานสำเร็จ (สาย - กำหนดเข้างาน ${assignedShift?.start_time?.slice(0, 5)})`
+      : 'ลงเวลาเข้างานสำเร็จ';
+
+    return created(res, { message, data: record, isLate });
   } catch (error) {
     return serverError(res, error, 'checkIn');
   }

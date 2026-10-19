@@ -98,3 +98,25 @@ CREATE INDEX IF NOT EXISTS idx_attendance_user_date ON attendance_records(user_i
 CREATE INDEX IF NOT EXISTS idx_attendance_work_date ON attendance_records(work_date);
 CREATE INDEX IF NOT EXISTS idx_leave_user_id ON leave_requests(user_id);
 CREATE INDEX IF NOT EXISTS idx_overtime_user_id ON overtime_requests(user_id);
+
+-- Shifts table (กะการทำงาน)
+CREATE TABLE IF NOT EXISTS shifts (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  shift_name VARCHAR(100) NOT NULL,
+  start_time TIME NOT NULL,
+  end_time TIME NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- User Shifts table (ตารางกะของพนักงาน)
+CREATE TABLE IF NOT EXISTS user_shifts (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  shift_id UUID NOT NULL REFERENCES shifts(id) ON DELETE CASCADE,
+  effective_date DATE,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_user_shifts_user_id ON user_shifts(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_shifts_shift_id ON user_shifts(shift_id);
+

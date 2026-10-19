@@ -10,6 +10,7 @@ import leaveRoutes from './routes/leave.routes.js';
 import overtimeRoutes from './routes/overtime.routes.js';
 import usersRoutes from './routes/users.routes.js';
 import reportRoutes from './routes/report.routes.js';
+import scheduleRoutes from './routes/schedule.routes.js';
 
 // ─── Validate required env vars at startup ────────────────────────────────────
 const REQUIRED_ENV = ['JWT_SECRET', 'SUPABASE_URL', 'SUPABASE_SERVICE_KEY'];
@@ -77,6 +78,7 @@ app.use('/api/leave', leaveRoutes);
 app.use('/api/overtime', overtimeRoutes);
 app.use('/api/users', usersRoutes);
 app.use('/api/reports', reportRoutes);
+app.use('/api/schedules', scheduleRoutes);
 
 // ─── 404 & Error handlers ─────────────────────────────────────────────────────
 app.use((req, res) =>

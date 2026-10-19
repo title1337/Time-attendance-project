@@ -5,6 +5,7 @@ import {
   LayoutDashboard,
   ClipboardList,
   CalendarDays,
+  Calendar,
   Users,
   Menu,
   X,
@@ -26,6 +27,12 @@ const navItems = [
     path: '/attendance',
     label: 'ลงเวลา',
     icon: Clock,
+    roles: ['employee', 'admin'],
+  },
+  {
+    path: '/schedule',
+    label: 'ตารางการทำงาน',
+    icon: Calendar,
     roles: ['employee', 'admin'],
   },
   {

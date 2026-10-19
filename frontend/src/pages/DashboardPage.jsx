@@ -6,11 +6,16 @@ import {
   CheckCircle,
   AlertCircle,
   Calendar,
+  Briefcase,
+  Clock,
+  ArrowRight,
 } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { format } from 'date-fns';
 import { th } from 'date-fns/locale';
 import { attendanceApi } from '../api/attendance.api';
+import { scheduleApi } from '../api/schedule.api';
 import useAuthStore from '../store/authStore';
 import MainLayout from '../components/layout/MainLayout';
 
@@ -34,16 +39,35 @@ function DashboardPage() {
   }, []);
 
   // Get today's attendance status
-  const { data: todayStatus, isLoading } = useQuery({
+  const { data: todayStatus, isLoading: isAttendanceLoading } = useQuery({
     queryKey: ['attendance', 'today'],
     queryFn: attendanceApi.getTodayStatus,
     refetchInterval: 30000,
   });
 
+  // Get my current assigned work shift
+  const { data: shiftResponse, isLoading: isShiftLoading } = useQuery({
+    queryKey: ['schedule', 'my-shift'],
+    queryFn: scheduleApi.getMyCurrentShift,
+    refetchInterval: 60000,
+  });
+
   const checkInMutation = useMutation({
     mutationFn: attendanceApi.checkIn,
-    onSuccess: () => {
-      toast.success('ลงเวลาเข้างานสำเร็จ!');
+    onSuccess: (data) => {
+      if (data?.isLate || data?.data?.status === 'late') {
+        toast((t) => (
+          <span className="flex items-center gap-2">
+            <span className="text-amber-300 font-bold">⚠️ ลงเวลาสาย:</span>
+            <span>{data?.message || 'ลงเวลาเข้างานสาย'}</span>
+          </span>
+        ), {
+          duration: 4500,
+          style: { background: '#d97706', color: '#fff' },
+        });
+      } else {
+        toast.success(data?.message || 'ลงเวลาเข้างานสำเร็จ!');
+      }
       queryClient.invalidateQueries({ queryKey: ['attendance'] });
     },
     onError: (err) =>
@@ -60,22 +84,55 @@ function DashboardPage() {
       toast.error(err.response?.data?.message || 'เกิดข้อผิดพลาด'),
   });
 
-  const checkInTime = todayStatus?.data?.check_in_time;
-  const checkOutTime = todayStatus?.data?.check_out_time;
+  const record = todayStatus?.data;
+  const checkInTime = record?.check_in_time;
+  const checkOutTime = record?.check_out_time;
+  const recordStatus = record?.status;
   const hasCheckedIn = Boolean(checkInTime);
   const hasCheckedOut = Boolean(checkOutTime);
 
-  const checkInDisplay = isLoading ? '...' : formatTimeOnly(checkInTime);
-  const checkOutDisplay = isLoading ? '...' : formatTimeOnly(checkOutTime);
+  const checkInDisplay = isAttendanceLoading ? '...' : formatTimeOnly(checkInTime);
+  const checkOutDisplay = isAttendanceLoading ? '...' : formatTimeOnly(checkOutTime);
 
-  let statusText = 'ยังไม่ลงชื่อ';
-  if (hasCheckedIn && hasCheckedOut) {
-    statusText = 'ครบถ้วน';
+  const assignedShift = shiftResponse?.data?.shift;
+
+  // Determine dynamic badge & text for today's status
+  let statusBadge = {
+    text: 'ยังไม่ลงชื่อ',
+    bg: 'bg-gray-100 text-gray-700',
+    icon: AlertCircle,
+  };
+
+  if (isAttendanceLoading) {
+    statusBadge = { text: '...', bg: 'bg-gray-100 text-gray-500', icon: AlertCircle };
+  } else if (hasCheckedIn && hasCheckedOut) {
+    if (recordStatus === 'late') {
+      statusBadge = {
+        text: 'ครบถ้วน (เข้างานสาย)',
+        bg: 'bg-amber-100 text-amber-800',
+        icon: AlertCircle,
+      };
+    } else {
+      statusBadge = {
+        text: 'ครบถ้วน (ปกติ)',
+        bg: 'bg-emerald-100 text-emerald-800',
+        icon: CheckCircle,
+      };
+    }
   } else if (hasCheckedIn) {
-    statusText = 'เข้างานแล้ว';
-  }
-  if (isLoading) {
-    statusText = '...';
+    if (recordStatus === 'late') {
+      statusBadge = {
+        text: 'เข้างานสาย',
+        bg: 'bg-amber-100 text-amber-800',
+        icon: AlertCircle,
+      };
+    } else {
+      statusBadge = {
+        text: 'เข้างานแล้ว (ปกติ)',
+        bg: 'bg-emerald-100 text-emerald-800',
+        icon: CheckCircle,
+      };
+    }
   }
 
   const isCheckInDisabled = hasCheckedIn || checkInMutation.isPending;
@@ -94,19 +151,63 @@ function DashboardPage() {
       ? `${buttonBaseClass} bg-white/20 cursor-not-allowed`
       : `${buttonBaseClass} bg-red-400 hover:bg-red-500 text-white shadow-md hover:shadow-lg`;
 
-  const StatusIcon = hasCheckedIn && hasCheckedOut ? CheckCircle : AlertCircle;
+  const StatusIcon = statusBadge.icon;
 
   return (
     <MainLayout>
       <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6">
         {/* Welcome */}
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 break-words">
-            สวัสดี, คุณ{user?.first_name}! 👋
-          </h1>
-          <p className="text-gray-500 mt-1 text-sm sm:text-base">
-            {format(currentTime, 'EEEE dd MMMM yyyy', { locale: th })}
-          </p>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div>
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900 break-words">
+              สวัสดี, คุณ{user?.first_name}! 👋
+            </h1>
+            <p className="text-gray-500 mt-1 text-sm sm:text-base">
+              {format(currentTime, 'EEEE dd MMMM yyyy', { locale: th })}
+            </p>
+          </div>
+          <Link
+            to="/schedule"
+            className="self-start sm:self-auto inline-flex items-center gap-2 px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-xl text-sm font-semibold transition"
+          >
+            <Calendar className="w-4 h-4" />
+            ตารางการทำงาน
+            <ArrowRight className="w-4 h-4" />
+          </Link>
+        </div>
+
+        {/* Assigned Shift Card */}
+        <div className="bg-white rounded-2xl p-5 shadow-sm border border-indigo-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+              <Briefcase className="w-6 h-6" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-semibold uppercase tracking-wider text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md">
+                  กะการทำงานวันนี้
+                </span>
+                {recordStatus === 'late' && (
+                  <span className="text-xs font-bold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-md">
+                    ลงเวลาสาย
+                  </span>
+                )}
+              </div>
+              <h2 className="text-lg font-bold text-gray-900 mt-1">
+                {isShiftLoading ? 'กำลังโหลด...' : (assignedShift?.shift_name || 'กะเวลามาตรฐาน')}
+              </h2>
+              <p className="text-sm text-gray-600 flex items-center gap-1.5 mt-0.5">
+                <Clock className="w-4 h-4 text-gray-400" />
+                เวลาทำงาน: <span className="font-semibold text-gray-900">{assignedShift?.start_time?.slice(0, 5) || '08:30'}</span> ถึง <span className="font-semibold text-gray-900">{assignedShift?.end_time?.slice(0, 5) || '17:30'} น.</span>
+              </p>
+            </div>
+          </div>
+          <div className="text-left sm:text-right w-full sm:w-auto pt-3 sm:pt-0 border-t sm:border-t-0 border-gray-100">
+            <span className="text-xs text-gray-400 block">เกณฑ์นับสาย</span>
+            <span className="text-sm font-medium text-rose-600">
+              หลังเวลา {assignedShift?.start_time?.slice(0, 5) || '08:30'} น.
+            </span>
+          </div>
         </div>
 
         {/* Clock Card */}
@@ -147,9 +248,16 @@ function DashboardPage() {
               </div>
               <div className="min-w-0">
                 <p className="text-xs text-gray-500">เวลาเข้างาน</p>
-                <p className="font-bold text-gray-900 truncate">
-                  {checkInDisplay}
-                </p>
+                <div className="flex items-baseline gap-2">
+                  <p className="font-bold text-gray-900 truncate">
+                    {checkInDisplay}
+                  </p>
+                  {recordStatus === 'late' && (
+                    <span className="text-xs font-semibold text-rose-600 bg-rose-50 px-1.5 py-0.5 rounded">
+                      สาย
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -175,7 +283,11 @@ function DashboardPage() {
               </div>
               <div className="min-w-0">
                 <p className="text-xs text-gray-500">สถานะวันนี้</p>
-                <p className="font-bold text-gray-900 truncate">{statusText}</p>
+                <div className="truncate">
+                  <span className={`inline-block text-xs font-semibold px-2 py-0.5 rounded-md ${statusBadge.bg}`}>
+                    {statusBadge.text}
+                  </span>
+                </div>
               </div>
             </div>
           </div>
