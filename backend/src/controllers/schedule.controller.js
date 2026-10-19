@@ -145,10 +145,12 @@ export const deleteShift = async (req, res) => {
  */
 export const getMyCurrentShift = async (req, res) => {
   const { id: userId } = req.user;
+  const targetDate = req.query.date || new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' });
 
   try {
-    // Get latest active user_shift
-    const { data, error } = await supabase
+    // 1. Try date-specific shift
+    let userShiftRecord = null;
+    const { data: dateShift } = await supabase
       .from('user_shifts')
       .select(`
         id,
@@ -164,11 +166,37 @@ export const getMyCurrentShift = async (req, res) => {
         )
       `)
       .eq('user_id', userId)
-      .order('created_at', { ascending: false })
-      .limit(1)
+      .eq('effective_date', targetDate)
       .maybeSingle();
 
-    if (error) throw error;
+    if (dateShift) {
+      userShiftRecord = dateShift;
+    } else {
+      // 2. Fallback to latest general user_shift
+      const { data: latestShift } = await supabase
+        .from('user_shifts')
+        .select(`
+          id,
+          user_id,
+          shift_id,
+          effective_date,
+          created_at,
+          shifts:shift_id (
+            id,
+            shift_name,
+            start_time,
+            end_time
+          )
+        `)
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      userShiftRecord = latestShift;
+    }
+
+    const data = userShiftRecord;
 
     // Fallback if no specific shift is assigned: default to first available shift
     let shiftData = data?.shifts ?? null;
@@ -201,20 +229,24 @@ export const getMyCurrentShift = async (req, res) => {
 };
 
 /**
- * GET /api/schedules/user-shifts
- * ดูรายการกะของพนักงานทุกคน (Admin or Employee viewing roster)
+ * GET /api/schedules/user-shifts?month=10&year=2026
+ * ดูรายการกะของพนักงานทุกคน พร้อมตารางกะรายวันในเดือนนั้น (Matrix Table)
  */
-export const getAllUserShifts = async (_req, res) => {
+export const getAllUserShifts = async (req, res) => {
+  const { month, year } = req.query;
+
   try {
-    // Get all users and their assigned shifts
+    // 1. Get all active and existing employees
     const { data: users, error: userError } = await supabase
       .from('users')
       .select('id, employee_code, first_name, last_name, department, position, role, is_active')
+      .order('department', { ascending: true })
       .order('employee_code', { ascending: true });
 
     if (userError) throw userError;
 
-    const { data: userShifts, error: shiftError } = await supabase
+    // 2. Query user_shifts
+    let query = supabase
       .from('user_shifts')
       .select(`
         id,
@@ -230,24 +262,62 @@ export const getAllUserShifts = async (_req, res) => {
       `)
       .order('created_at', { ascending: false });
 
+    // If month and year provided, get shifts for that month (plus general shifts without date)
+    if (month && year) {
+      const monthStr = String(month).padStart(2, '0');
+      const startDate = `${year}-${monthStr}-01`;
+      const endDate = `${year}-${monthStr}-31`;
+      query = query.or(`effective_date.gte.${startDate},effective_date.is.null`)
+                   .or(`effective_date.lte.${endDate},effective_date.is.null`);
+    }
+
+    const { data: userShifts, error: shiftError } = await query;
     if (shiftError) throw shiftError;
 
-    // Map latest shift for each user
-    const shiftMap = new Map();
+    // Build schedule map per user:
+    // userDailyMap: Map<user_id, Map<YYYY-MM-DD, shift>>
+    // userDefaultMap: Map<user_id, shift>
+    const userDailyMap = new Map();
+    const userDefaultMap = new Map();
+
     userShifts?.forEach((us) => {
-      if (!shiftMap.has(us.user_id)) {
-        shiftMap.set(us.user_id, us);
+      if (us.effective_date) {
+        if (!userDailyMap.has(us.user_id)) {
+          userDailyMap.set(us.user_id, new Map());
+        }
+        const daily = userDailyMap.get(us.user_id);
+        if (!daily.has(us.effective_date)) {
+          daily.set(us.effective_date, {
+            assignment_id: us.id,
+            shift_id: us.shift_id,
+            shift: us.shifts,
+          });
+        }
+      } else {
+        if (!userDefaultMap.has(us.user_id)) {
+          userDefaultMap.set(us.user_id, {
+            assignment_id: us.id,
+            shift_id: us.shift_id,
+            shift: us.shifts,
+          });
+        }
       }
     });
 
     const result = users.map((u) => {
-      const assigned = shiftMap.get(u.id);
+      const dailySchedulesObj = {};
+      if (userDailyMap.has(u.id)) {
+        userDailyMap.get(u.id).forEach((val, dateKey) => {
+          dailySchedulesObj[dateKey] = val;
+        });
+      }
+
+      const defaultShift = userDefaultMap.get(u.id) || null;
+
       return {
         ...u,
-        assignment_id: assigned?.id ?? null,
-        shift_id: assigned?.shift_id ?? null,
-        effective_date: assigned?.effective_date ?? null,
-        shift: assigned?.shifts ?? null,
+        default_shift: defaultShift?.shift || null,
+        daily_schedules: dailySchedulesObj,
       };
     });
 
@@ -259,8 +329,7 @@ export const getAllUserShifts = async (_req, res) => {
 
 /**
  * POST /api/schedules/assign
- * มอบหมาย/เปลี่ยนกะการทำงานให้พนักงาน (Admin or Employee for self/others)
- * รองรับทั้งพนักงานเลือกกะของตนเอง และ Admin จัดตารางให้พนักงาน
+ * มอบหมาย/เปลี่ยนกะการทำงานให้พนักงาน (รายวันหรือกะหลัก)
  */
 export const assignUserShift = async (req, res) => {
   const { id: currentUserId, role } = req.user;
@@ -335,12 +404,19 @@ export const assignUserShift = async (req, res) => {
       return badRequest(res, 'ไม่พบกะการทำงานที่ระบุ');
     }
 
-    // Check if user already has an assignment
-    const { data: existing } = await supabase
+    // Check if user already has an assignment for this date
+    let findQuery = supabase
       .from('user_shifts')
       .select('id')
-      .eq('user_id', targetUserId)
-      .maybeSingle();
+      .eq('user_id', targetUserId);
+
+    if (effective_date) {
+      findQuery = findQuery.eq('effective_date', effective_date);
+    } else {
+      findQuery = findQuery.is('effective_date', null);
+    }
+
+    const { data: existing } = await findQuery.maybeSingle();
 
     let result;
     if (existing) {

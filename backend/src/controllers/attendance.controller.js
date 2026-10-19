@@ -34,29 +34,56 @@ export const checkIn = async (req, res) => {
 
     if (existing) return badRequest(res, 'ลงเวลาเข้างานวันนี้แล้ว');
 
-    // Find assigned shift for this user to check for late attendance
+    // Find assigned shift for this user for today's date (or general assignment)
     let isLate = false;
     let assignedShift = null;
 
-    const { data: userShift } = await supabase
+    // 1. Check if there is a specific shift assigned for today (workDate)
+    const { data: dateSpecificShift } = await supabase
       .from('user_shifts')
       .select('shifts:shift_id (id, shift_name, start_time, end_time)')
       .eq('user_id', userId)
-      .order('created_at', { ascending: false })
-      .limit(1)
+      .eq('effective_date', workDate)
       .maybeSingle();
 
-    if (userShift?.shifts?.start_time) {
-      assignedShift = userShift.shifts;
+    if (dateSpecificShift?.shifts?.start_time) {
+      assignedShift = dateSpecificShift.shifts;
     } else {
-      // Default standard shift if none assigned
-      const { data: defaultShift } = await supabase
-        .from('shifts')
-        .select('*')
-        .order('created_at', { ascending: true })
+      // 2. Fallback to latest general user shift assignment
+      const { data: generalUserShift } = await supabase
+        .from('user_shifts')
+        .select('shifts:shift_id (id, shift_name, start_time, end_time)')
+        .eq('user_id', userId)
+        .is('effective_date', null)
+        .order('created_at', { ascending: false })
         .limit(1)
         .maybeSingle();
-      if (defaultShift) assignedShift = defaultShift;
+
+      if (generalUserShift?.shifts?.start_time) {
+        assignedShift = generalUserShift.shifts;
+      } else {
+        // 3. Fallback to any recent assigned shift for this user
+        const { data: anyUserShift } = await supabase
+          .from('user_shifts')
+          .select('shifts:shift_id (id, shift_name, start_time, end_time)')
+          .eq('user_id', userId)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (anyUserShift?.shifts?.start_time) {
+          assignedShift = anyUserShift.shifts;
+        } else {
+          // 4. Default standard shift (กะเช้า)
+          const { data: defaultShift } = await supabase
+            .from('shifts')
+            .select('*')
+            .order('created_at', { ascending: true })
+            .limit(1)
+            .maybeSingle();
+          if (defaultShift) assignedShift = defaultShift;
+        }
+      }
     }
 
     if (assignedShift?.start_time) {

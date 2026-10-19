@@ -31,9 +31,9 @@ export const scheduleApi = {
     return response.data;
   },
 
-  // Get all user schedule assignments
-  getAllUserShifts: async () => {
-    const response = await axiosInstance.get('/schedules/user-shifts');
+  // Get all user schedule assignments (matrix roster)
+  getAllUserShifts: async (params) => {
+    const response = await axiosInstance.get('/schedules/user-shifts', { params });
     return response.data;
   },
 
