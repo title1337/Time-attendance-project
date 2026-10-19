@@ -56,15 +56,18 @@ function DashboardPage() {
     mutationFn: attendanceApi.checkIn,
     onSuccess: (data) => {
       if (data?.isLate || data?.data?.status === 'late') {
-        toast((t) => (
-          <span className="flex items-center gap-2">
-            <span className="text-amber-300 font-bold">⚠️ ลงเวลาสาย:</span>
-            <span>{data?.message || 'ลงเวลาเข้างานสาย'}</span>
-          </span>
-        ), {
-          duration: 4500,
-          style: { background: '#d97706', color: '#fff' },
-        });
+        toast(
+          (t) => (
+            <span className="flex items-center gap-2">
+              <span className="text-amber-300 font-bold">⚠️ ลงเวลาสาย:</span>
+              <span>{data?.message || 'ลงเวลาเข้างานสาย'}</span>
+            </span>
+          ),
+          {
+            duration: 4500,
+            style: { background: '#d97706', color: '#fff' },
+          },
+        );
       } else {
         toast.success(data?.message || 'ลงเวลาเข้างานสำเร็จ!');
       }
@@ -91,8 +94,12 @@ function DashboardPage() {
   const hasCheckedIn = Boolean(checkInTime);
   const hasCheckedOut = Boolean(checkOutTime);
 
-  const checkInDisplay = isAttendanceLoading ? '...' : formatTimeOnly(checkInTime);
-  const checkOutDisplay = isAttendanceLoading ? '...' : formatTimeOnly(checkOutTime);
+  const checkInDisplay = isAttendanceLoading
+    ? '...'
+    : formatTimeOnly(checkInTime);
+  const checkOutDisplay = isAttendanceLoading
+    ? '...'
+    : formatTimeOnly(checkOutTime);
 
   const assignedShift = shiftResponse?.data?.shift;
 
@@ -104,7 +111,11 @@ function DashboardPage() {
   };
 
   if (isAttendanceLoading) {
-    statusBadge = { text: '...', bg: 'bg-gray-100 text-gray-500', icon: AlertCircle };
+    statusBadge = {
+      text: '...',
+      bg: 'bg-gray-100 text-gray-500',
+      icon: AlertCircle,
+    };
   } else if (hasCheckedIn && hasCheckedOut) {
     if (recordStatus === 'late') {
       statusBadge = {
@@ -194,16 +205,25 @@ function DashboardPage() {
                 )}
               </div>
               <h2 className="text-lg font-bold text-gray-900 mt-1">
-                {isShiftLoading ? 'กำลังโหลด...' : (assignedShift?.shift_name || 'กะเวลามาตรฐาน')}
+                {isShiftLoading
+                  ? 'กำลังโหลด...'
+                  : assignedShift?.shift_name || 'กะเวลามาตรฐาน'}
               </h2>
               <p className="text-sm text-gray-600 flex items-center gap-1.5 mt-0.5">
                 <Clock className="w-4 h-4 text-gray-400" />
-                เวลาทำงาน: <span className="font-semibold text-gray-900">{assignedShift?.start_time?.slice(0, 5) || '08:30'}</span> ถึง <span className="font-semibold text-gray-900">{assignedShift?.end_time?.slice(0, 5) || '17:30'} น.</span>
+                เวลาทำงาน:{' '}
+                <span className="font-semibold text-gray-900">
+                  {assignedShift?.start_time?.slice(0, 5) || '08:30'}
+                </span>{' '}
+                ถึง{' '}
+                <span className="font-semibold text-gray-900">
+                  {assignedShift?.end_time?.slice(0, 5) || '17:30'} น.
+                </span>
               </p>
             </div>
           </div>
           <div className="text-left sm:text-right w-full sm:w-auto pt-3 sm:pt-0 border-t sm:border-t-0 border-gray-100">
-            <span className="text-xs text-gray-400 block">เกณฑ์นับสาย</span>
+            <span className="text-xs text-gray-400 block">สาย</span>
             <span className="text-sm font-medium text-rose-600">
               หลังเวลา {assignedShift?.start_time?.slice(0, 5) || '08:30'} น.
             </span>
@@ -284,7 +304,9 @@ function DashboardPage() {
               <div className="min-w-0">
                 <p className="text-xs text-gray-500">สถานะวันนี้</p>
                 <div className="truncate">
-                  <span className={`inline-block text-xs font-semibold px-2 py-0.5 rounded-md ${statusBadge.bg}`}>
+                  <span
+                    className={`inline-block text-xs font-semibold px-2 py-0.5 rounded-md ${statusBadge.bg}`}
+                  >
                     {statusBadge.text}
                   </span>
                 </div>
