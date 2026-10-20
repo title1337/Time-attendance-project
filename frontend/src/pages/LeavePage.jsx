@@ -41,8 +41,9 @@ const LEAVE_TYPES = [
 ];
 
 export default function LeavePage() {
-  const { user, isAdmin } = useAuthStore();
+  const { user, isManager } = useAuthStore();
   const queryClient = useQueryClient();
+  const canManage = isManager();
 
   // Active view tab for managers: 'my' or 'manage'
   const [activeTab, setActiveTab] = useState('my');
@@ -77,7 +78,7 @@ export default function LeavePage() {
         search: debouncedSearch || undefined,
         status: statusFilter || undefined,
       }),
-    enabled: isAdmin() && activeTab === 'manage',
+    enabled: canManage && activeTab === 'manage',
   });
 
   // Mutations
@@ -248,7 +249,7 @@ export default function LeavePage() {
             </p>
           </div>
 
-          {isAdmin() && (
+          {canManage && (
             <div className="flex bg-gray-200/80 p-1 rounded-xl">
               <button
                 onClick={() => setActiveTab('my')}

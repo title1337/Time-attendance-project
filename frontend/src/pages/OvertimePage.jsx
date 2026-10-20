@@ -21,8 +21,9 @@ import useAuthStore from '../store/authStore';
 import { useDebounce } from '../hooks/useDebounce';
 
 export default function OvertimePage() {
-  const { user, isAdmin } = useAuthStore();
+  const { user, isManager } = useAuthStore();
   const queryClient = useQueryClient();
+  const canManage = isManager();
 
   const [activeTab, setActiveTab] = useState('my');
 
@@ -52,7 +53,7 @@ export default function OvertimePage() {
         search: debouncedSearch || undefined,
         status: statusFilter || undefined,
       }),
-    enabled: isAdmin() && activeTab === 'manage',
+    enabled: canManage && activeTab === 'manage',
   });
 
   // Mutations
@@ -133,7 +134,7 @@ export default function OvertimePage() {
             </p>
           </div>
 
-          {isAdmin() && (
+          {canManage && (
             <div className="flex bg-gray-200/80 p-1 rounded-xl">
               <button
                 onClick={() => setActiveTab('my')}

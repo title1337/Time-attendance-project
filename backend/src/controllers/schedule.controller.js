@@ -1,5 +1,11 @@
 import supabase from '../config/supabase.js';
-import { ok, created, badRequest, notFound, serverError } from '../utils/response.js';
+import {
+  ok,
+  created,
+  badRequest,
+  notFound,
+  serverError,
+} from '../utils/response.js';
 
 const TIME_REGEX = /^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/;
 
@@ -44,7 +50,10 @@ export const createShift = async (req, res) => {
     return badRequest(res, 'กรุณาระบุชื่อกะการทำงาน');
   }
   if (!start_time || !TIME_REGEX.test(start_time)) {
-    return badRequest(res, 'รูปแบบเวลาเริ่มงานไม่ถูกต้อง (HH:MM หรือ HH:MM:SS)');
+    return badRequest(
+      res,
+      'รูปแบบเวลาเริ่มงานไม่ถูกต้อง (HH:MM หรือ HH:MM:SS)',
+    );
   }
   if (!end_time || !TIME_REGEX.test(end_time)) {
     return badRequest(res, 'รูปแบบเวลาเลิกงานไม่ถูกต้อง (HH:MM หรือ HH:MM:SS)');
@@ -122,13 +131,13 @@ export const deleteShift = async (req, res) => {
       .eq('shift_id', id);
 
     if (count && count > 0) {
-      return badRequest(res, `ไม่สามารถลบกะนี้ได้เนื่องจากมีพนักงานใช้งานอยู่ (${count} คน)`);
+      return badRequest(
+        res,
+        `ไม่สามารถลบกะนี้ได้เนื่องจากมีพนักงานใช้งานอยู่ (${count} คน)`,
+      );
     }
 
-    const { error } = await supabase
-      .from('shifts')
-      .delete()
-      .eq('id', id);
+    const { error } = await supabase.from('shifts').delete().eq('id', id);
 
     if (error) throw error;
     return ok(res, { message: 'ลบกะการทำงานสำเร็จ' });
@@ -145,14 +154,17 @@ export const deleteShift = async (req, res) => {
  */
 export const getMyCurrentShift = async (req, res) => {
   const { id: userId } = req.user;
-  const targetDate = req.query.date || new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' });
+  const targetDate =
+    req.query.date ||
+    new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' });
 
   try {
     // 1. Try date-specific shift
     let userShiftRecord = null;
     const { data: dateShift } = await supabase
       .from('user_shifts')
-      .select(`
+      .select(
+        `
         id,
         user_id,
         shift_id,
@@ -164,7 +176,8 @@ export const getMyCurrentShift = async (req, res) => {
           start_time,
           end_time
         )
-      `)
+      `,
+      )
       .eq('user_id', userId)
       .eq('effective_date', targetDate)
       .maybeSingle();
@@ -175,7 +188,8 @@ export const getMyCurrentShift = async (req, res) => {
       // 2. Fallback to latest general user_shift
       const { data: latestShift } = await supabase
         .from('user_shifts')
-        .select(`
+        .select(
+          `
           id,
           user_id,
           shift_id,
@@ -187,7 +201,8 @@ export const getMyCurrentShift = async (req, res) => {
             start_time,
             end_time
           )
-        `)
+        `,
+        )
         .eq('user_id', userId)
         .order('created_at', { ascending: false })
         .limit(1)
@@ -239,7 +254,9 @@ export const getAllUserShifts = async (req, res) => {
     // 1. Get all active and existing employees
     const { data: users, error: userError } = await supabase
       .from('users')
-      .select('id, employee_code, first_name, last_name, department, position, role, is_active')
+      .select(
+        'id, employee_code, first_name, last_name, department, position, role, is_active',
+      )
       .order('department', { ascending: true })
       .order('employee_code', { ascending: true });
 
@@ -248,7 +265,8 @@ export const getAllUserShifts = async (req, res) => {
     // 2. Query user_shifts
     let query = supabase
       .from('user_shifts')
-      .select(`
+      .select(
+        `
         id,
         user_id,
         shift_id,
@@ -259,7 +277,8 @@ export const getAllUserShifts = async (req, res) => {
           start_time,
           end_time
         )
-      `)
+      `,
+      )
       .order('created_at', { ascending: false });
 
     // If month and year provided, get shifts for that month (plus general shifts without date)
@@ -267,8 +286,9 @@ export const getAllUserShifts = async (req, res) => {
       const monthStr = String(month).padStart(2, '0');
       const startDate = `${year}-${monthStr}-01`;
       const endDate = `${year}-${monthStr}-31`;
-      query = query.or(`effective_date.gte.${startDate},effective_date.is.null`)
-                   .or(`effective_date.lte.${endDate},effective_date.is.null`);
+      query = query
+        .or(`effective_date.gte.${startDate},effective_date.is.null`)
+        .or(`effective_date.lte.${endDate},effective_date.is.null`);
     }
 
     const { data: userShifts, error: shiftError } = await query;
@@ -343,8 +363,13 @@ export const assignUserShift = async (req, res) => {
     custom_end_time,
   } = req.body;
 
-  // If not admin, employees can only assign/update their own shift
-  const targetUserId = role === 'admin' ? (user_id || currentUserId) : currentUserId;
+  // Admin and manager can assign shifts to other users.
+  // Employees can only assign/update their own shift.
+  const isAdmin = role === 'admin';
+  const isManager = role === 'manager';
+  const hasManagementAccess = isAdmin || isManager;
+  const requestedUserId = user_id || currentUserId;
+  const targetUserId = hasManagementAccess ? requestedUserId : currentUserId;
 
   let assignedShiftId = shift_id;
 
@@ -360,7 +385,9 @@ export const assignUserShift = async (req, res) => {
 
       const formattedStart = formatTimeToSeconds(custom_start_time);
       const formattedEnd = formatTimeToSeconds(custom_end_time);
-      const shiftName = custom_name?.trim() || `กำหนดเอง (${custom_start_time.slice(0, 5)} - ${custom_end_time.slice(0, 5)})`;
+      const shiftName =
+        custom_name?.trim() ||
+        `กำหนดเอง (${custom_start_time.slice(0, 5)} - ${custom_end_time.slice(0, 5)})`;
 
       // Check if an identical shift already exists or create new
       const { data: existingShift } = await supabase
@@ -427,13 +454,15 @@ export const assignUserShift = async (req, res) => {
           effective_date: effective_date || null,
         })
         .eq('id', existing.id)
-        .select(`
+        .select(
+          `
           id,
           user_id,
           shift_id,
           effective_date,
           shifts:shift_id (id, shift_name, start_time, end_time)
-        `)
+        `,
+        )
         .single();
 
       if (error) throw error;
@@ -446,13 +475,15 @@ export const assignUserShift = async (req, res) => {
           shift_id: assignedShiftId,
           effective_date: effective_date || null,
         })
-        .select(`
+        .select(
+          `
           id,
           user_id,
           shift_id,
           effective_date,
           shifts:shift_id (id, shift_name, start_time, end_time)
-        `)
+        `,
+        )
         .single();
 
       if (error) throw error;

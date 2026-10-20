@@ -21,43 +21,43 @@ const navItems = [
     path: '/dashboard',
     label: 'แดชบอร์ด',
     icon: LayoutDashboard,
-    roles: ['employee', 'admin'],
+    roles: ['employee', 'manager', 'admin'],
   },
   {
     path: '/attendance',
     label: 'ลงเวลา',
     icon: Clock,
-    roles: ['employee', 'admin'],
+    roles: ['employee', 'manager', 'admin'],
   },
   {
     path: '/schedule',
     label: 'ตารางการทำงาน',
     icon: Calendar,
-    roles: ['employee', 'admin'],
+    roles: ['employee', 'manager', 'admin'],
   },
   {
     path: '/leave',
     label: 'ลาหยุด',
     icon: CalendarDays,
-    roles: ['employee', 'admin'],
+    roles: ['employee', 'manager', 'admin'],
   },
   {
     path: '/overtime',
     label: 'ล่วงเวลา',
     icon: ClipboardList,
-    roles: ['employee', 'admin'],
+    roles: ['employee', 'manager', 'admin'],
   },
   {
     path: '/admin/users',
     label: 'จัดการผู้ใช้',
     icon: Users,
-    roles: ['admin'],
+    roles: ['admin'], // ไม่แก้ ยังเป็น admin เท่านั้น
   },
   {
     path: '/admin/reports',
     label: 'รายงาน',
     icon: Settings,
-    roles: ['admin'],
+    roles: ['manager', 'admin'],
   },
 ];
 

@@ -40,22 +40,44 @@ function getShiftBadge(shift) {
 
   // Check code in name e.g. "กะเช้า (Morning)", "วันหยุด (H)", "ลาป่วย (E)"
   if (name.includes('(H)') || name.includes('วันหยุด')) {
-    return { code: 'H', bg: 'bg-red-600 text-white font-bold border-red-700', isHoliday: true };
+    return {
+      code: 'H',
+      bg: 'bg-red-600 text-white font-bold border-red-700',
+      isHoliday: true,
+    };
   }
   if (name.includes('(E)') || name.includes('ลาป่วย')) {
-    return { code: 'E', bg: 'bg-yellow-400 text-black font-bold border-yellow-500', isLeave: 'sick' };
+    return {
+      code: 'E',
+      bg: 'bg-yellow-400 text-black font-bold border-yellow-500',
+      isLeave: 'sick',
+    };
   }
   if (name.includes('(P)') || name.includes('ลากิจ')) {
-    return { code: 'P', bg: 'bg-green-500 text-white font-bold border-green-600', isLeave: 'personal' };
+    return {
+      code: 'P',
+      bg: 'bg-green-500 text-white font-bold border-green-600',
+      isLeave: 'personal',
+    };
   }
   if (name.includes('(L)') || name.includes('ลาพักร้อน')) {
-    return { code: 'L', bg: 'bg-orange-500 text-white font-bold border-orange-600', isLeave: 'annual' };
+    return {
+      code: 'L',
+      bg: 'bg-orange-500 text-white font-bold border-orange-600',
+      isLeave: 'annual',
+    };
   }
   if (name.includes('บ่าย') || name.includes('(B)')) {
-    return { code: 'B', bg: 'bg-pink-300 text-pink-950 font-bold border-pink-400' };
+    return {
+      code: 'B',
+      bg: 'bg-pink-300 text-pink-950 font-bold border-pink-400',
+    };
   }
   if (name.includes('ดึก') || name.includes('(C)')) {
-    return { code: 'C', bg: 'bg-purple-300 text-purple-950 font-bold border-purple-400' };
+    return {
+      code: 'C',
+      bg: 'bg-purple-300 text-purple-950 font-bold border-purple-400',
+    };
   }
 
   // Default working shift (A = กะเช้า/กะมาตรฐาน) - Sky blue
@@ -66,8 +88,9 @@ function getShiftBadge(shift) {
 }
 
 export default function SchedulePage() {
-  const { user, isAdmin } = useAuthStore();
+  const { user, isManager } = useAuthStore();
   const queryClient = useQueryClient();
+  const canManage = isManager();
 
   const today = new Date();
   const [currentYear, setCurrentYear] = useState(today.getFullYear());
@@ -110,7 +133,8 @@ export default function SchedulePage() {
 
   const { data: userShiftsData, isLoading: loadingMatrix } = useQuery({
     queryKey: ['schedules', 'user-shifts', currentMonth, currentYear],
-    queryFn: () => scheduleApi.getAllUserShifts({ month: currentMonth, year: currentYear }),
+    queryFn: () =>
+      scheduleApi.getAllUserShifts({ month: currentMonth, year: currentYear }),
   });
 
   const { data: myShiftData } = useQuery({
@@ -127,7 +151,8 @@ export default function SchedulePage() {
       resetShiftForm();
       queryClient.invalidateQueries({ queryKey: ['schedules'] });
     },
-    onError: (err) => toast.error(err.response?.data?.message || 'เกิดข้อผิดพลาด'),
+    onError: (err) =>
+      toast.error(err.response?.data?.message || 'เกิดข้อผิดพลาด'),
   });
 
   const updateShiftMutation = useMutation({
@@ -138,7 +163,8 @@ export default function SchedulePage() {
       resetShiftForm();
       queryClient.invalidateQueries({ queryKey: ['schedules'] });
     },
-    onError: (err) => toast.error(err.response?.data?.message || 'เกิดข้อผิดพลาด'),
+    onError: (err) =>
+      toast.error(err.response?.data?.message || 'เกิดข้อผิดพลาด'),
   });
 
   const deleteShiftMutation = useMutation({
@@ -147,7 +173,8 @@ export default function SchedulePage() {
       toast.success('ลบกะการทำงานสำเร็จ');
       queryClient.invalidateQueries({ queryKey: ['schedules'] });
     },
-    onError: (err) => toast.error(err.response?.data?.message || 'ไม่สามารถลบกะนี้ได้'),
+    onError: (err) =>
+      toast.error(err.response?.data?.message || 'ไม่สามารถลบกะนี้ได้'),
   });
 
   const assignMutation = useMutation({
@@ -159,7 +186,8 @@ export default function SchedulePage() {
       queryClient.invalidateQueries({ queryKey: ['schedule', 'my-shift'] });
       queryClient.invalidateQueries({ queryKey: ['attendance'] });
     },
-    onError: (err) => toast.error(err.response?.data?.message || 'เกิดข้อผิดพลาดในการบันทึกกะ'),
+    onError: (err) =>
+      toast.error(err.response?.data?.message || 'เกิดข้อผิดพลาดในการบันทึกกะ'),
   });
 
   const resetShiftForm = () => {
@@ -197,8 +225,11 @@ export default function SchedulePage() {
 
   // Open Cell Click Modal to choose shift directly for a specific day
   const handleCellClick = (employee, dateStr, dayNum, currentAssignedShift) => {
-    // Only Admin or the employee themselves can edit their schedule
-    if (!isAdmin() && employee.id !== user?.id) {
+    // Admin, manager, or the employee themselves can edit the schedule
+    const isOwnRow = employee.id === user?.id;
+    const canEditCell = canManage || isOwnRow;
+
+    if (!canEditCell) {
       toast.error('คุณสามารถจัดการตารางการทำงานของตนเองเท่านั้น');
       return;
     }
@@ -211,12 +242,18 @@ export default function SchedulePage() {
       currentShift: currentAssignedShift,
     });
 
-    setSelectedShiftId(currentAssignedShift?.id || shiftsData?.data?.[0]?.id || '');
+    setSelectedShiftId(
+      currentAssignedShift?.id || shiftsData?.data?.[0]?.id || '',
+    );
     setAssignmentMode('preset');
     setCustomShiftForm({
       shift_name: '',
-      start_time: currentAssignedShift?.start_time ? formatTime(currentAssignedShift.start_time) : '08:30',
-      end_time: currentAssignedShift?.end_time ? formatTime(currentAssignedShift.end_time) : '17:30',
+      start_time: currentAssignedShift?.start_time
+        ? formatTime(currentAssignedShift.start_time)
+        : '08:30',
+      end_time: currentAssignedShift?.end_time
+        ? formatTime(currentAssignedShift.end_time)
+        : '17:30',
     });
   };
 
@@ -307,14 +344,19 @@ export default function SchedulePage() {
     if (!debouncedSearch) return rawUsers;
     const q = debouncedSearch.toLowerCase();
     return rawUsers.filter((u) => {
-      const fullName = `${u.first_name || ''} ${u.last_name || ''}`.toLowerCase();
+      const fullName =
+        `${u.first_name || ''} ${u.last_name || ''}`.toLowerCase();
       const code = (u.employee_code || '').toLowerCase();
       const dept = (u.department || '').toLowerCase();
       return fullName.includes(q) || code.includes(q) || dept.includes(q);
     });
   }, [rawUsers, debouncedSearch]);
 
-  const monthTitle = format(new Date(currentYear, currentMonth - 1, 1), 'MMMM', { locale: th });
+  const monthTitle = format(
+    new Date(currentYear, currentMonth - 1, 1),
+    'MMMM',
+    { locale: th },
+  );
   const thaiBuddhistYear = currentYear + 543;
 
   return (
@@ -446,14 +488,19 @@ export default function SchedulePage() {
               </div>
 
               <span className="text-xs text-gray-500 self-center sm:self-auto">
-                พนักงานทั้งหมด {filteredUsers.length} คน (คลิกที่ช่องวันที่เพื่อกำหนดกะ)
+                พนักงานทั้งหมด {filteredUsers.length} คน
+                (คลิกที่ช่องวันที่เพื่อกำหนดกะ)
               </span>
             </div>
 
             {loadingMatrix ? (
-              <div className="py-16 text-center text-gray-400">กำลังโหลดตารางเวร...</div>
+              <div className="py-16 text-center text-gray-400">
+                กำลังโหลดตารางเวร...
+              </div>
             ) : filteredUsers.length === 0 ? (
-              <div className="py-16 text-center text-gray-400">ไม่พบรายชื่อพนักงาน</div>
+              <div className="py-16 text-center text-gray-400">
+                ไม่พบรายชื่อพนักงาน
+              </div>
             ) : (
               <div className="overflow-x-auto border border-gray-300 rounded-xl">
                 <table className="border-collapse text-xs select-none w-full min-w-max">
@@ -472,14 +519,19 @@ export default function SchedulePage() {
                       >
                         ตารางการทำงาน เดือน {monthTitle} {thaiBuddhistYear}
                       </th>
-                      <th colSpan={4} className="py-1.5 px-2 text-center text-xs">
+                      <th
+                        colSpan={4}
+                        className="py-1.5 px-2 text-center text-xs"
+                      >
                         สรุปวันลา / หยุด
                       </th>
                     </tr>
 
                     {/* Row 1: Day Numbers 1..31 */}
                     <tr className="bg-[#e5e7eb] text-gray-800 font-bold border-b border-gray-300 text-center">
-                      <th className="py-2 px-2 border-r border-gray-300 w-10 text-center">ลำดับ</th>
+                      <th className="py-2 px-2 border-r border-gray-300 w-10 text-center">
+                        ลำดับ
+                      </th>
                       <th className="py-2 px-3 border-r border-gray-300 min-w-[140px] text-left">
                         ชื่อพนักงาน
                       </th>
@@ -492,7 +544,9 @@ export default function SchedulePage() {
                         <th
                           key={day.dayNum}
                           className={`py-1.5 px-1 w-8 min-w-[28px] border-r border-gray-300 text-center font-bold ${
-                            day.isWeekend ? 'bg-red-100 text-red-600' : 'bg-gray-100 text-gray-800'
+                            day.isWeekend
+                              ? 'bg-red-100 text-red-600'
+                              : 'bg-gray-100 text-gray-800'
                           }`}
                         >
                           {day.dayNum}
@@ -524,7 +578,9 @@ export default function SchedulePage() {
                         <th
                           key={day.dayNum}
                           className={`py-1 px-1 border-r border-gray-300 text-[10px] ${
-                            day.isWeekend ? 'bg-red-50 text-red-600 font-bold' : 'text-gray-600'
+                            day.isWeekend
+                              ? 'bg-red-50 text-red-600 font-bold'
+                              : 'text-gray-600'
                           }`}
                         >
                           {day.dayAbbr}
@@ -558,9 +614,14 @@ export default function SchedulePage() {
                       let countL = 0;
 
                       daysInCurrentMonth.forEach((day) => {
-                        const assigned = emp.daily_schedules?.[day.dateStr]?.shift;
+                        const assigned =
+                          emp.daily_schedules?.[day.dateStr]?.shift;
                         const defaultShift = emp.default_shift;
-                        const currentShift = assigned || (day.isWeekend ? { shift_name: 'วันหยุด (H)' } : defaultShift);
+                        const currentShift =
+                          assigned ||
+                          (day.isWeekend
+                            ? { shift_name: 'วันหยุด (H)' }
+                            : defaultShift);
                         const badge = getShiftBadge(currentShift);
 
                         if (badge.isHoliday) countH++;
@@ -600,23 +661,36 @@ export default function SchedulePage() {
 
                           {/* Day Cells (Interactive Click to Choose Shift) */}
                           {daysInCurrentMonth.map((day) => {
-                            const assigned = emp.daily_schedules?.[day.dateStr]?.shift;
+                            const assigned =
+                              emp.daily_schedules?.[day.dateStr]?.shift;
                             const defaultShift = emp.default_shift;
 
                             // If not set specifically for this date:
                             // weekends default to Holiday (H), weekdays default to user's assigned default shift
                             const currentShift =
-                              assigned || (day.isWeekend ? { shift_name: 'วันหยุด (H)' } : defaultShift);
+                              assigned ||
+                              (day.isWeekend
+                                ? { shift_name: 'วันหยุด (H)' }
+                                : defaultShift);
 
                             const badge = getShiftBadge(currentShift);
-                            const canEdit = isAdmin() || isMe;
+                            const canEdit = canManage || isMe;
 
                             return (
                               <td
                                 key={day.dayNum}
-                                onClick={() => handleCellClick(emp, day.dateStr, day.dayNum, currentShift)}
+                                onClick={() =>
+                                  handleCellClick(
+                                    emp,
+                                    day.dateStr,
+                                    day.dayNum,
+                                    currentShift,
+                                  )
+                                }
                                 className={`p-0 border-r border-gray-300 text-center align-middle cursor-pointer transition select-none ${
-                                  canEdit ? 'hover:opacity-80 active:scale-95' : 'cursor-default'
+                                  canEdit
+                                    ? 'hover:opacity-80 active:scale-95'
+                                    : 'cursor-default'
                                 }`}
                                 title={`${emp.first_name}: วันที่ ${day.dayNum} (${currentShift?.shift_name || 'กะมาตรฐาน'}) - คลิกเพื่อเปลี่ยนกะ`}
                               >
@@ -657,13 +731,15 @@ export default function SchedulePage() {
           <div className="space-y-4">
             <div className="flex justify-between items-center">
               <div>
-                <h3 className="font-bold text-gray-900 text-lg">รายการกะการทำงาน (Shift Templates)</h3>
+                <h3 className="font-bold text-gray-900 text-lg">
+                  รายการกะการทำงาน (Shift Templates)
+                </h3>
                 <p className="text-xs text-gray-500">
                   กำหนดช่วงเวลาเข้า-ออกงานที่ใช้ในการคำนวณการมาสายและการทำงาน
                 </p>
               </div>
 
-              {isAdmin() && (
+              {canManage && (
                 <button
                   onClick={handleOpenCreateShift}
                   className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold px-4 py-2 rounded-xl shadow-sm transition"
@@ -674,7 +750,9 @@ export default function SchedulePage() {
             </div>
 
             {loadingShifts ? (
-              <div className="py-12 text-center text-gray-400">กำลังโหลดรายการกะ...</div>
+              <div className="py-12 text-center text-gray-400">
+                กำลังโหลดรายการกะ...
+              </div>
             ) : shifts.length === 0 ? (
               <div className="bg-white rounded-2xl p-8 text-center text-gray-400 border border-gray-100">
                 ยังไม่มีกะการทำงานในระบบ
@@ -688,13 +766,16 @@ export default function SchedulePage() {
                   >
                     <div className="flex justify-between items-start">
                       <div>
-                        <h4 className="font-bold text-gray-900 text-base">{shift.shift_name}</h4>
+                        <h4 className="font-bold text-gray-900 text-base">
+                          {shift.shift_name}
+                        </h4>
                         <div className="flex items-center gap-2 mt-2 text-indigo-600 font-mono text-lg font-bold">
                           <Clock className="w-5 h-5 text-indigo-500" />
-                          {formatTime(shift.start_time)} - {formatTime(shift.end_time)} น.
+                          {formatTime(shift.start_time)} -{' '}
+                          {formatTime(shift.end_time)} น.
                         </div>
                       </div>
-                      {isAdmin() && (
+                      {canManage && (
                         <div className="flex gap-1">
                           <button
                             onClick={() => handleOpenEditShift(shift)}
@@ -705,7 +786,11 @@ export default function SchedulePage() {
                           </button>
                           <button
                             onClick={() => {
-                              if (confirm(`คุณต้องการลบกะ "${shift.shift_name}" หรือไม่?`)) {
+                              if (
+                                confirm(
+                                  `คุณต้องการลบกะ "${shift.shift_name}" หรือไม่?`,
+                                )
+                              ) {
                                 deleteShiftMutation.mutate(shift.id);
                               }
                             }}
@@ -751,7 +836,12 @@ export default function SchedulePage() {
                   วันที่ {cellModal.dayNum} {monthTitle} {thaiBuddhistYear}
                 </h3>
                 <p className="text-xs text-gray-500 mt-0.5">
-                  พนักงาน: <b className="text-gray-800">{cellModal.employee?.first_name} {cellModal.employee?.last_name}</b> ({cellModal.employee?.department || '-'})
+                  พนักงาน:{' '}
+                  <b className="text-gray-800">
+                    {cellModal.employee?.first_name}{' '}
+                    {cellModal.employee?.last_name}
+                  </b>{' '}
+                  ({cellModal.employee?.department || '-'})
                 </p>
               </div>
 
@@ -813,14 +903,19 @@ export default function SchedulePage() {
                                 {badge.code}
                               </span>
                               <div>
-                                <span className="block text-sm leading-tight">{s.shift_name}</span>
+                                <span className="block text-sm leading-tight">
+                                  {s.shift_name}
+                                </span>
                                 <span className="text-xs text-gray-500 font-mono">
-                                  {formatTime(s.start_time)} - {formatTime(s.end_time)} น.
+                                  {formatTime(s.start_time)} -{' '}
+                                  {formatTime(s.end_time)} น.
                                 </span>
                               </div>
                             </div>
                           </div>
-                          {isSelected && <CheckCircle className="w-5 h-5 text-indigo-600" />}
+                          {isSelected && (
+                            <CheckCircle className="w-5 h-5 text-indigo-600" />
+                          )}
                         </label>
                       );
                     })}
@@ -840,7 +935,10 @@ export default function SchedulePage() {
                         className="w-full bg-white border border-gray-300 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
                         value={customShiftForm.shift_name}
                         onChange={(e) =>
-                          setCustomShiftForm({ ...customShiftForm, shift_name: e.target.value })
+                          setCustomShiftForm({
+                            ...customShiftForm,
+                            shift_name: e.target.value,
+                          })
                         }
                       />
                     </div>
@@ -856,7 +954,10 @@ export default function SchedulePage() {
                           className="w-full bg-white border border-gray-300 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none font-mono font-bold text-indigo-950"
                           value={customShiftForm.start_time}
                           onChange={(e) =>
-                            setCustomShiftForm({ ...customShiftForm, start_time: e.target.value })
+                            setCustomShiftForm({
+                              ...customShiftForm,
+                              start_time: e.target.value,
+                            })
                           }
                         />
                       </div>
@@ -871,7 +972,10 @@ export default function SchedulePage() {
                           className="w-full bg-white border border-gray-300 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none font-mono font-bold text-indigo-950"
                           value={customShiftForm.end_time}
                           onChange={(e) =>
-                            setCustomShiftForm({ ...customShiftForm, end_time: e.target.value })
+                            setCustomShiftForm({
+                              ...customShiftForm,
+                              end_time: e.target.value,
+                            })
                           }
                         />
                       </div>
@@ -892,7 +996,9 @@ export default function SchedulePage() {
                     disabled={assignMutation.isPending}
                     className="px-5 py-2 text-xs sm:text-sm font-semibold bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow-sm transition"
                   >
-                    {assignMutation.isPending ? 'กำลังบันทึก...' : 'บันทึกกะวันนี้'}
+                    {assignMutation.isPending
+                      ? 'กำลังบันทึก...'
+                      : 'บันทึกกะวันนี้'}
                   </button>
                 </div>
               </form>
@@ -927,7 +1033,9 @@ export default function SchedulePage() {
                     placeholder="เช่น กะเช้า, กะบ่าย, กะดึก, วันหยุด (H)"
                     className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
                     value={shiftForm.shift_name}
-                    onChange={(e) => setShiftForm({ ...shiftForm, shift_name: e.target.value })}
+                    onChange={(e) =>
+                      setShiftForm({ ...shiftForm, shift_name: e.target.value })
+                    }
                   />
                 </div>
 
@@ -941,7 +1049,12 @@ export default function SchedulePage() {
                       required
                       className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none font-mono"
                       value={shiftForm.start_time}
-                      onChange={(e) => setShiftForm({ ...shiftForm, start_time: e.target.value })}
+                      onChange={(e) =>
+                        setShiftForm({
+                          ...shiftForm,
+                          start_time: e.target.value,
+                        })
+                      }
                     />
                   </div>
 
@@ -954,7 +1067,9 @@ export default function SchedulePage() {
                       required
                       className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none font-mono"
                       value={shiftForm.end_time}
-                      onChange={(e) => setShiftForm({ ...shiftForm, end_time: e.target.value })}
+                      onChange={(e) =>
+                        setShiftForm({ ...shiftForm, end_time: e.target.value })
+                      }
                     />
                   </div>
                 </div>
@@ -969,7 +1084,10 @@ export default function SchedulePage() {
                   </button>
                   <button
                     type="submit"
-                    disabled={createShiftMutation.isPending || updateShiftMutation.isPending}
+                    disabled={
+                      createShiftMutation.isPending ||
+                      updateShiftMutation.isPending
+                    }
                     className="px-5 py-2 text-sm font-semibold bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow-sm transition"
                   >
                     บันทึกกะ

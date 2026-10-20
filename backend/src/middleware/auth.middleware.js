@@ -22,10 +22,31 @@ export const authMiddleware = (req, res, next) => {
 
 // ─── Role guards ──────────────────────────────────────────────────────────────
 
-const ROLES = Object.freeze({ ADMIN: 'admin' });
+const ROLES = Object.freeze({
+  ADMIN: 'admin',
+  MANAGER: 'manager',
+});
 
-export const requireAdminAccess = (req, res, next) =>
-  req.user?.role === ROLES.ADMIN
-    ? next()
-    : forbidden(res, 'ต้องการสิทธิ์ผู้ดูแลระบบ');
+export const requireAdminAccess = (req, res, next) => {
+  const userRole = req.user?.role;
+  const isAdmin = userRole === ROLES.ADMIN;
 
+  if (!isAdmin) {
+    return forbidden(res, 'ต้องการสิทธิ์ผู้ดูแลระบบ');
+  }
+
+  return next();
+};
+
+export const requireManagerAccess = (req, res, next) => {
+  const userRole = req.user?.role;
+  const isAdmin = userRole === ROLES.ADMIN;
+  const isManager = userRole === ROLES.MANAGER;
+  const hasManagementAccess = isAdmin || isManager;
+
+  if (!hasManagementAccess) {
+    return forbidden(res, 'ต้องการสิทธิ์ผู้จัดการขึ้นไป');
+  }
+
+  return next();
+};
