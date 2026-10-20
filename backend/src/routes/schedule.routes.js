@@ -10,10 +10,6 @@ import {
 } from '../controllers/schedule.controller.js';
 import {
   authMiddleware,
-  requireAdminAccess,
-} from '../middleware/auth.middleware.js';
-import {
-  authMiddleware,
   requireManagerAccess,
 } from '../middleware/auth.middleware.js';
 
@@ -21,13 +17,7 @@ const router = Router();
 
 router.use(authMiddleware);
 
-// Shift routes
-router.get('/shifts', getAllShifts);
-router.post('/shifts', requireAdminAccess, createShift);
-router.put('/shifts/:id', requireAdminAccess, updateShift);
-router.delete('/shifts/:id', requireAdminAccess, deleteShift);
-
-//Manager shift routes
+// Shift routes (manager and admin can manage shifts)
 router.get('/shifts', getAllShifts);
 router.post('/shifts', requireManagerAccess, createShift);
 router.put('/shifts/:id', requireManagerAccess, updateShift);
