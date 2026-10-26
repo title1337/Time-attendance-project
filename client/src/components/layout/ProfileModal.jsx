@@ -16,6 +16,30 @@ import useAuthStore from '../../store/authStore';
 import { authApi } from '../../api/auth.api';
 import toast from 'react-hot-toast';
 
+const getRoleMeta = (role) => {
+  switch (role) {
+    case 'admin':
+      return {
+        label: 'ผู้ดูแลระบบ (Admin)',
+        badge: 'Admin',
+        badgeClass: 'bg-purple-100 text-purple-700 border border-purple-200',
+      };
+    case 'manager':
+      return {
+        label: 'ผู้จัดการ (Manager)',
+        badge: 'Manager',
+        badgeClass: 'bg-blue-100 text-blue-700 border border-blue-200',
+      };
+    case 'employee':
+    default:
+      return {
+        label: 'พนักงาน (Employee)',
+        badge: 'Employee',
+        badgeClass: 'bg-emerald-100 text-emerald-700 border border-emerald-200',
+      };
+  }
+};
+
 export default function ProfileModal({ isOpen, onClose }) {
   const { user, updateUser } = useAuthStore();
 
@@ -42,6 +66,8 @@ export default function ProfileModal({ isOpen, onClose }) {
   const initials = `${firstName?.[0] || user?.first_name?.[0] || ''}${
     lastName?.[0] || user?.last_name?.[0] || ''
   }`.toUpperCase();
+
+  const roleMeta = getRoleMeta(user?.role);
 
   // Compress & convert selected file using HTML Canvas
   const handleFileChange = (e) => {
@@ -308,17 +334,13 @@ export default function ProfileModal({ isOpen, onClose }) {
                   <div>
                     <span className="text-gray-400 block">สิทธิ์การใช้งาน</span>
                     <span className="font-semibold text-gray-800">
-                      {user?.role === 'admin' ? 'ผู้ดูแลระบบ (Admin)' : 'พนักงาน (Employee)'}
+                      {roleMeta.label}
                     </span>
                   </div>
                   <span
-                    className={`px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${
-                      user?.role === 'admin'
-                        ? 'bg-purple-100 text-purple-700'
-                        : 'bg-emerald-100 text-emerald-700'
-                    }`}
+                    className={`px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${roleMeta.badgeClass}`}
                   >
-                    {user?.role === 'admin' ? 'Admin' : 'Employee'}
+                    {roleMeta.badge}
                   </span>
                 </div>
               </div>
