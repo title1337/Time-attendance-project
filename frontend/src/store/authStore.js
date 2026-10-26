@@ -19,7 +19,10 @@ const useAuthStore = create(
         set({ user: null, token: null, isAuthenticated: false });
       },
 
-      updateUser: (user) => set({ user }),
+      updateUser: (userData) =>
+        set((state) => ({
+          user: state.user ? { ...state.user, ...userData } : userData,
+        })),
 
       isAdmin: () => get().user?.role === 'admin',
       isManager: () => ['admin', 'manager'].includes(get().user?.role),

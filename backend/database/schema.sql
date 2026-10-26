@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS users (
   email VARCHAR(255) UNIQUE NOT NULL,
   department VARCHAR(100),
   position VARCHAR(100),
+  avatar_url TEXT,
   role VARCHAR(20) DEFAULT 'employee' CHECK (role IN ('employee', 'admin')),
   is_active BOOLEAN DEFAULT true,
   created_at TIMESTAMPTZ DEFAULT NOW(),

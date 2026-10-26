@@ -16,6 +16,11 @@ export const authApi = {
     return response.data;
   },
 
+  updateProfile: async (profileData) => {
+    const response = await axiosInstance.put('/auth/profile', profileData);
+    return response.data;
+  },
+
   logout: async () => {
     const response = await axiosInstance.post('/auth/logout');
     return response.data;
