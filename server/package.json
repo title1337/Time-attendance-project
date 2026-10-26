@@ -1,7 +1,7 @@
 {
-  "name": "time-attendance-backend",
+  "name": "time-attendance-server",
   "version": "1.0.0",
-  "description": "Time Attendance System Backend API",
+  "description": "Time Attendance System Server API",
   "main": "src/server.js",
   "type": "module",
   "scripts": {

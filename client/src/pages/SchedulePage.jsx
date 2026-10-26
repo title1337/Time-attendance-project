@@ -406,7 +406,7 @@ export default function SchedulePage() {
                     : 'text-gray-600 hover:text-gray-900'
                 }`}
               >
-                <Users className="w-3.5 h-3.5" /> ตารางเวรรายเดือน
+                <Users className="w-3.5 h-3.5" /> ตารางงานรายเดือน
               </button>
               <button
                 onClick={() => setActiveTab('shifts')}
