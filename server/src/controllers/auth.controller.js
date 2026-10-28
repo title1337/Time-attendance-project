@@ -13,6 +13,7 @@ import {
 // ─── Private helpers ─────────────────────────────────────────────────────────
 
 const SALT_ROUNDS = 12;
+const JWT_EXPIRES_IN = '1d';
 
 const USER_PUBLIC_FIELDS = [
   'id',
@@ -60,7 +61,7 @@ const attachAvatarFromStorageIfMissing = async (user) => {
 
 const generateToken = ({ id, email, role, employee_code }) =>
   jwt.sign({ id, email, role, employee_code }, process.env.JWT_SECRET, {
-    expiresIn: process.env.JWT_EXPIRES_IN ?? '7d',
+    expiresIn: JWT_EXPIRES_IN,
   });
 
 // ─── Controllers ─────────────────────────────────────────────────────────────

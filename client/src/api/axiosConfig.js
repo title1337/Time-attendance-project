@@ -1,4 +1,5 @@
 import axios from 'axios';
+import useAuthStore from '../store/authStore';
 
 // When deployed on Vercel as a single project, /api is on the same domain!
 // Locally in dev mode Vite uses http://localhost:5000/api
@@ -30,8 +31,7 @@ axiosInstance.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
+      useAuthStore.getState().logout();
       window.location.href = '/login';
     }
     return Promise.reject(error);
